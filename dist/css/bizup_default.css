@@ -1,0 +1,110 @@
+@charset "UTF-8";
+/* kintone アラートを改行 */
+.notifier-error-cybozu .notifier-body-cybozu li {
+    white-space: pre;
+    color: #fff;
+}
+
+.bz_table_def {
+    background-color: #fff;
+}
+.bz_table_def th,
+.bz_table_def td {
+    border: 1px solid #999;
+    padding: 5px;
+}
+.bz_table_def.bz_table_sep {
+    border-collapse: separate;
+    border-top: 1px solid #999;
+    border-left: 1px solid #999;
+}
+.bz_table_def.bz_table_sep > thead > tr > th,
+.bz_table_def.bz_table_sep > tr > th,
+.bz_table_def.bz_table_sep > tbody > tr > td,
+.bz_table_def.bz_table_sep > tr > td {
+    border-top: none;
+    border-left: none;
+}
+
+/* button on kintone header */
+button.bizup_header_button {
+    display: inline-block;
+    box-sizing: border-box;
+    margin: 0px 5px;
+    background-color: rgb(247, 249, 250);
+    border: 1px solid rgb(227, 231, 232);
+    line-height: 47px;
+    height: 48px;
+    color: rgb(52, 152, 219);
+}
+button.bz_bt_def {
+    background-color: #3498db;
+    border: 1px solid #e3e7e8;
+    border-radius: 5px;
+    line-height: 2em;
+    padding: 0 1em;
+    color: #fff;
+}
+button.bz_bt_def.bz_bt_mini {
+    font-size: 0.85em;
+}
+button.bz_bt_def.bz_bt_red {
+    background-color: #e00000;
+}
+button.bz_bt_def:hover {
+    background-color: #1d3fda;
+}
+button.bz_bt_def.bz_bt_min {
+    font-size: 0.9em;
+}
+button.bz_bt_def:disabled {
+    background-color: #999;
+    color: #ddd;
+}
+
+.bz_al_L {
+    text-align: left;
+}
+
+.bz_al_R {
+    text-align: right;
+}
+
+.bz_al_C {
+    text-align: center;
+}
+
+.bz_indent_01em {
+    margin-left: 1em;
+    text-indent: -1em;
+}
+
+.app-index-container-gaia.container-gaia {
+    width: -moz-fit-content;
+    width: fit-content;
+    min-width: 100vw;
+}
+.app-index-container-gaia.container-gaia .app-index-container-gaia .gaia-argoui-app-index-breadcrumb,
+.app-index-container-gaia.container-gaia .app-index-container-gaia .gaia-argoui-app-index-toolbar,
+.app-index-container-gaia.container-gaia .app-index-container-gaia .gaia-argoui-app-toolbar {
+    position: sticky;
+    left: 0;
+    z-index: 100;
+    max-width: 100vw;
+}
+
+/* 画面外横スクロール時の対応
+.container-gaia.app-index-container-gaia {
+    width: fit-content;
+    min-width: 100vw;
+}
+
+.app-index-container-gaia .gaia-argoui-app-index-breadcrumb,
+.app-index-container-gaia .gaia-argoui-app-index-toolbar,
+.app-index-container-gaia .gaia-argoui-app-toolbar {
+    position: sticky;
+    left: 0;
+    z-index: 100;
+    max-width: 100vw;
+}
+*/ /*# sourceMappingURL=bizup_default.css.map */

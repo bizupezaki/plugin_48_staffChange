@@ -1,0 +1,56 @@
+{
+    "manifest_version": 1,
+    "version": "1.1",
+    "type": "APP",
+    "name": {
+        "ja": "担当者変更プラグイン",
+        "en": "Assignee Change Plugin",
+        "zh": "负责人变更插件"
+    },
+    "description": {
+        "ja": "顧客カルテの担当者を複数のパターンで比較しながら一括で変更できます。",
+        "en": "You can change the assignee of customer records in bulk while comparing multiple patterns.",
+        "zh": "您可以在比较多种模式的同时批量更改客户记录的负责人。"
+    },
+    "icon": "image/BIZUP_プラグイン共通アイコン.png",
+    "homepage_url": {
+        "ja": "https://www.bizup.co.jp/",
+        "en": "https://www.bizup.co.jp/",
+        "zh": "https://www.bizup.co.jp/"
+    },
+    "config": {
+        "html": "html/config.html",
+        "js": [
+            "https://js.cybozu.com/kintone-rest-api-client/5.0.4/KintoneRestAPIClient.min.js",
+            "https://js.cybozu.com/vuejs/v3.3.9/vue.global.prod.js",
+            "https://cdn.jsdelivr.net/npm/sortablejs@1.10.2/Sortable.min.js",
+            "https://cdn.jsdelivr.net/npm/vue-draggable-next@2.3.0/dist/vue-draggable-next.global.min.js",
+            "https://js.cybozu.com/sweetalert2/v11.22.1/sweetalert2.min.js",
+            "https://127.0.0.1:5501/dist/js/bizup_config.js"
+        ],
+        "css": [
+            "https://js.cybozu.com/sweetalert2/v11.22.1/sweetalert2.min.css",
+            "https://127.0.0.1:5501/dist/css/bizup_default.css",
+            "https://127.0.0.1:5501/dist/css/bizup_config.css"
+        ]
+    },
+    "desktop": {
+        "js": [
+            "https://js.cybozu.com/kintone-rest-api-client/5.0.4/KintoneRestAPIClient.min.js",
+            "https://js.cybozu.com/vuejs/v3.3.9/vue.global.prod.js",
+            "https://cdnjs.cloudflare.com/ajax/libs/vue-select/4.0.0-beta.6/vue-select.umd.min.js",
+            "https://js.cybozu.com/sweetalert2/v11.22.1/sweetalert2.min.js",
+            "https://127.0.0.1:5501/dist/js/bizup_events.js"
+        ],
+        "css": [
+            "https://cdnjs.cloudflare.com/ajax/libs/vue-select/4.0.0-beta.6/vue-select.min.css",
+            "https://js.cybozu.com/sweetalert2/v11.22.1/sweetalert2.min.css",
+            "https://127.0.0.1:5501/dist/css/bizup_default.css",
+            "https://127.0.0.1:5501/dist/css/bizup_events.css"
+        ]
+    },
+    "mobile": {
+        "js": [],
+        "css": []
+    }
+}

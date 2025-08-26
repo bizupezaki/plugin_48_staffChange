@@ -1,0 +1,45 @@
+# 顧客カルテの担当者を一括変更するプラグイン（専用アプリ用）
+
+
+初期設定 最初だけ実行
+kintone-plugin-packer dist --out plugin_48_担当者変更プラグイン.zip
+
+※ppkができたら以下ppkを置換
+
+// ZIP生成
+watchなし
+kintone-plugin-packer --ppk phanaijoapjdoklaolhlkigcadbfikhm.ppk dist --out plugin_48_担当者変更プラグイン.zip
+
+watch
+kintone-plugin-packer --watch --ppk phanaijoapjdoklaolhlkigcadbfikhm.ppk dist --out plugin_48_担当者変更プラグイン.zip
+
+
+// ウォッチしたら別ターミナルあけて以下実行
+
+# demo
+kintone-plugin-uploader --base-url https://bizup-demo.cybozu.com --username Administrator --password admin9217 plugin_48_担当者変更プラグイン.zip
+# demo watch
+kintone-plugin-uploader --base-url https://bizup-demo.cybozu.com --username Administrator --password admin9217 --watch plugin_48_担当者変更プラグイン.zip
+
+# 開発用アプリ https://bizup-demo.cybozu.com/k/324/
+
+
+
+#### 以下はまだアップしません
+## アップロード develop watchあり
+## kintone-plugin-uploader --base-url https://bizup-develop.cybozu.com --username ezaki --password ezaki9217 --watch plugin_48_担当者変更プラグイン.zip
+
+## watchなし
+## kintone-plugin-uploader --base-url https://bizup-develop.cybozu.com --username ezaki --password ezaki9217 plugin_48_担当者変更プラグイン.zip
+
+
+## 本番 watch
+## kintone-plugin-uploader --base-url https://bizup.cybozu.com --username ezaki --password ezaki9217 --watch plugin_48_担当者変更プラグイン.zip
+## 本番 watchなし
+## kintone-plugin-uploader --base-url https://bizup.cybozu.com --username ezaki --password ezaki9217 plugin_48_担当者変更プラグイン.zip
+
+
+
+
+
+

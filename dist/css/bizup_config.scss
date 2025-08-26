@@ -1,0 +1,126 @@
+#bz_config_main {
+    box-sizing: border-box;
+
+    button {
+        white-space: nowrap;
+    }
+    table.bz_table_def {
+        border-collapse: separate;
+        border-spacing: 0;
+
+        border-top: 1px solid #999;
+        border-left: 1px solid #999;
+        thead {
+            background-color: #eee;
+        }
+        th,
+        td {
+            border-top-style: none;
+            border-left-style: none;
+        }
+        tr {
+            &.bz_tr_diselect {
+                background-color: #ccc;
+            }
+        }
+    }
+
+    .bz_div_box {
+        border: 1px solid #fc0;
+        padding: 1em;
+        margin-top: 1em;
+    }
+
+    #bz_config_footer {
+        margin-top: 20px;
+
+        #bz_config_buttons {
+            button.bz_bt_def {
+                &.bz_bt_primary {
+                    background-color: #007bff;
+                    border-color: #007bff;
+                    color: #fff;
+                }
+                &.bz_bt_default {
+                    margin-left: 1em;
+                }
+                &.bz_bt_danger {
+                    background-color: #dc3545;
+                    border-color: #dc3545;
+                    color: #fff;
+                    margin-left: 1em;
+                }
+            }
+        }
+    }
+
+    h3 {
+        font-size: 14px;
+        margin-bottom: 5px;
+    }
+
+    #bz_config_table_container {
+        table {
+            td,
+            th {
+                font-size: 12px;
+            }
+        }
+
+        .sortable-chosen {
+            background: #fff;
+            td {
+                background: #ffee00;
+                opacity: 1;
+            }
+        }
+
+        .bz_draggable_ghost {
+            td {
+                background-color: #ffecb3;
+                opacity: 1 !important;
+            }
+        }
+
+        .bz_col_handle,
+        .bz_drag_handle {
+            max-width: 20px;
+            min-width: 20px;
+        }
+
+        .bz_drag_handle {
+            font-size: 16px;
+            padding: 0;
+            text-align: center;
+            cursor: move;
+        }
+    }
+
+    .bz_flex_container {
+        display: flex;
+        gap: 1em;
+        align-items: center;
+        margin-top: 1em;
+        align-items: flex-start;
+
+        &.bz_flex_gap_30 {
+            gap: 30px;
+        }
+    }
+
+    .bz_table_scroll_wrapper {
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+
+    #bz_config_table_list {
+        border-top: none;
+        thead th {
+            position: sticky;
+            top: 0;
+            background: #eee;
+            z-index: 2;
+            border-top: 1px solid #999;
+        }
+    }
+}

@@ -1,0 +1,16 @@
+#bz_update_staffs_container {
+  margin: 20px;
+}
+#bz_update_staffs_container,
+#bz_update_staffs_container * {
+  box-sizing: border-box;
+  font-size: 12px;
+}
+#bz_update_staffs_container input,
+#bz_update_staffs_container select,
+#bz_update_staffs_container button {
+  vertical-align: middle;
+}
+#bz_update_staffs_container button {
+  white-space: nowrap;
+}/*# sourceMappingURL=bizup_events.css.map */
