@@ -1,6 +1,6 @@
 /**
- * BIZUP 前年度データ繰越プラグイン
- * Copyright © 2023 Bizup
+ * BIZUP 担当者変更プラグイン
+ * Copyright © 2025 Bizup
  */
 (function (PLUGIN_ID) {
     'use strict';
