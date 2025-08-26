@@ -1,0 +1,17 @@
+#bz_update_staffs_container_DEV {
+    margin: 20px;
+    &,
+    * {
+        box-sizing: border-box;
+        font-size: 12px;
+    }
+
+    input,
+    select,
+    button {
+        vertical-align: middle;
+    }
+    button {
+        white-space: nowrap;
+    }
+}
