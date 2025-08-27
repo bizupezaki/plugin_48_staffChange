@@ -13,4 +13,21 @@
 }
 #bz_update_staffs_container_DEV button {
   white-space: nowrap;
+}
+#bz_update_staffs_container_DEV table.bz_table_def {
+  border-collapse: separate;
+  border-spacing: 0;
+  border-top: 1px solid #999;
+  border-left: 1px solid #999;
+}
+#bz_update_staffs_container_DEV table.bz_table_def thead {
+  background-color: #eee;
+}
+#bz_update_staffs_container_DEV table.bz_table_def th,
+#bz_update_staffs_container_DEV table.bz_table_def td {
+  border-top-style: none;
+  border-left-style: none;
+}
+#bz_update_staffs_container_DEV table.bz_table_def tr.bz_tr_diselect {
+  background-color: #ccc;
 }/*# sourceMappingURL=bizup_events_DEV.css.map */

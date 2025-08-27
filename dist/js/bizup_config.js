@@ -77,7 +77,8 @@
                     });
                 } else {
                     // DATA全体を保存
-                    const CONF = structuredClone(Vue.toRaw(DATA));
+                    //const CONF = structuredClone(Vue.toRaw(DATA));
+                    const CONF = structuredClone(window.pluginUtils.common.deepUnproxy(DATA));
                     kintone.plugin.app.setConfig({
                         CONFIG_DATA: JSON.stringify(CONF),
                     });
@@ -283,15 +284,7 @@
                                     <th>操作</th>
                                 </tr>
                             </thead>
-                            <draggable
-                                class="list-group"
-                                v-model="DATA.tableFields"
-                                tag="tbody"
-                                :component-data="{is:'tbody'}"
-                                handle=".bz_drag_handle"
-                                ghost-class="bz_draggable_ghost"
-                                :group="{ name: 'fields', pull: true, put: true }"
-                            >
+                            <draggable class="list-group" v-model="DATA.tableFields" tag="tbody" :component-data="{is:'tbody'}" handle=".bz_drag_handle" ghost-class="bz_draggable_ghost" :group="{ name: 'fields', pull: true, put: true }">
                                 <tr v-for="(field,index) in DATA.tableFields" :key="field.code">
                                     <td class="bz_drag_handle">
                                         <span>☰</span>

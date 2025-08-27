@@ -26,6 +26,7 @@
             "https://cdn.jsdelivr.net/npm/sortablejs@1.10.2/Sortable.min.js",
             "https://cdn.jsdelivr.net/npm/vue-draggable-next@2.3.0/dist/vue-draggable-next.global.min.js",
             "https://js.cybozu.com/sweetalert2/v11.22.1/sweetalert2.min.js",
+            "https://127.0.0.1:5501/dist/js/bizup_commonFunction_DEV.js",
             "https://127.0.0.1:5501/dist/js/bizup_config.js"
         ],
         "css": [
@@ -40,14 +41,17 @@
             "https://js.cybozu.com/vuejs/v3.3.9/vue.global.prod.js",
             "https://cdnjs.cloudflare.com/ajax/libs/vue-select/4.0.0-beta.6/vue-select.umd.min.js",
             "https://js.cybozu.com/sweetalert2/v11.22.1/sweetalert2.min.js",
-            "https://127.0.0.1:5501/dist/js/bizup_events.js",
+            "https://127.0.0.1:5501/dist/js/bizup_constants_DEV.js",
+            "https://127.0.0.1:5501/dist/js/bizup_recordUtils_DEV.js",
+            "https://127.0.0.1:5501/dist/js/bizup_commonFunction_DEV.js",
+            "https://127.0.0.1:5501/dist/js/bizup_events_DEV.js",
             "js/bizup_events.js"
         ],
         "css": [
             "https://cdnjs.cloudflare.com/ajax/libs/vue-select/4.0.0-beta.6/vue-select.min.css",
             "https://js.cybozu.com/sweetalert2/v11.22.1/sweetalert2.min.css",
             "https://127.0.0.1:5501/dist/css/bizup_default.css",
-            "https://127.0.0.1:5501/dist/css/bizup_events.css",
+            "https://127.0.0.1:5501/dist/css/bizup_events_DEV.css",
             "css/bizup_events.css"
         ]
     },

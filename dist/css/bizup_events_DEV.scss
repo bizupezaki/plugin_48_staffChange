@@ -14,4 +14,28 @@
     button {
         white-space: nowrap;
     }
+        
+    table.bz_table_def {
+        border-collapse: separate;
+        border-spacing: 0;
+
+        border-top: 1px solid #999;
+        border-left: 1px solid #999;
+
+        thead {
+            background-color: #eee;
+        }
+
+        th,
+        td {
+            border-top-style: none;
+            border-left-style: none;
+        }
+
+        tr {
+            &.bz_tr_diselect {
+                background-color: #ccc;
+            }
+        }
+    }
 }
