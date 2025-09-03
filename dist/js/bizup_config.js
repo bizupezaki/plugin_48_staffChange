@@ -78,7 +78,7 @@
                 } else {
                     // DATA全体を保存
                     //const CONF = structuredClone(Vue.toRaw(DATA));
-                    const CONF = structuredClone(window.pluginUtils.common.deepUnproxy(DATA));
+                    const CONF = structuredClone(window.bizupUtil.common.deepUnproxy(DATA));
                     kintone.plugin.app.setConfig({
                         CONFIG_DATA: JSON.stringify(CONF),
                     });

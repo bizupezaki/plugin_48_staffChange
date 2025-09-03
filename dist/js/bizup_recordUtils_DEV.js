@@ -11,7 +11,7 @@
     const fetchFieldDefinitions = async (appId) => {
         // フィールド情報を取得
         try {
-            const resp = await window.pluginUtils.constants.CLIENT.app.getFormFields({ app: appId });
+            const resp = await window.bizupUtil.constants.CLIENT.app.getFormFields({ app: appId });
             return resp.properties;
         } catch (e) {
             throw new Error('レコードの取得に失敗しました: ' + e.message);
@@ -42,7 +42,7 @@
                 param.orderBy = orderby;
             }
 
-            selRes = await window.pluginUtils.constants.CLIENT.record.getAllRecords(param);
+            selRes = await window.bizupUtil.constants.CLIENT.record.getAllRecords(param);
             if (selRes.length === 0) {
                 // データがなかった場合
                 console.log('該当データなし！：', param);
@@ -69,7 +69,7 @@
                 records: upRecords,
             };
             console.log('upParam:', upParam);
-            upRes = await window.pluginUtils.constants.CLIENT.record.updateAllRecords(upParam);
+            upRes = await window.bizupUtil.constants.CLIENT.record.updateAllRecords(upParam);
             return upRes;
         } catch (e) {
             throw new Error('レコードの更新に失敗しました: ' + e.message);
@@ -88,7 +88,7 @@
                 app: appId,
                 records: addRecords,
             };
-            addRes = await window.pluginUtils.constants.CLIENT.record.addAllRecords(addParam);
+            addRes = await window.bizupUtil.constants.CLIENT.record.addAllRecords(addParam);
             //console.log(addRes);
             return addRes;
         } catch (e) {
@@ -108,7 +108,7 @@
                 app: appId,
                 records: delRecords,
             };
-            delRes = await window.pluginUtils.constants.CLIENT.record.deleteAllRecords(delParam);
+            delRes = await window.bizupUtil.constants.CLIENT.record.deleteAllRecords(delParam);
             //console.log(delRes);
             return delRes;
         } catch (e) {
@@ -117,8 +117,8 @@
     };
 
     // グローバル変数として定義
-    window.pluginUtils = window.pluginUtils || {};
-    window.pluginUtils.recordUtils = {
+    window.bizupUtil = window.bizupUtil || {};
+    window.bizupUtil.recordUtils = {
         fetchFieldDefinitions: fetchFieldDefinitions,
         getRecords: getRecords,
         updateRecords: updateRecords,

@@ -62,7 +62,7 @@
      * @return {String} 定数定義の文字列
      */
     const getFieldMap = async (appId) => {
-        const fields = await window.pluginUtils.recordUtils.fetchFieldDefinitions(appId);
+        const fields = await window.bizupUtil.recordUtils.fetchFieldDefinitions(appId);
         //const map = {};
         let str = '';
         let i = 0;
@@ -202,8 +202,8 @@
     };
 
     // グローバル変数として定義
-    window.pluginUtils = window.pluginUtils || {};
-    window.pluginUtils.common = {
+    window.bizupUtil = window.bizupUtil || {};
+    window.bizupUtil.common = {
         dispLog: dispLog,
         getFieldMap: getFieldMap,
         containsKey: containsKey,
