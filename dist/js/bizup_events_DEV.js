@@ -88,7 +88,7 @@
                     },
                 ],
                 listData: {},
-                listDataPattern: { clickNo: null, datas: [] },
+                listDataPattern: { clickNo: null, datas: [], clickName: '' },
                 patternNames: { len: 0, no: 0, maxlength: 3, names: [] },
                 testSelectedStaff: null,
                 selectedStaff: null,
@@ -97,20 +97,35 @@
 
             // 項目名除外
             const EXCEPT_ITEMS = ['$id', '$revision'];
+            // 所属
+            const ORG_ITEM = ['チーム', '副チーム'];
 
             // パターン名登録項目
             let PATTERN_NAME_ITEMS = [
-                { cd: '$id', label: '', type: '', visible: false },
-                { cd: '担当者コード', label: '', type: '', visible: false },
+                { cd: '$id', label: '', type: '', visible: true },
+                { cd: '担当者コード', label: '', type: '', visible: true },
                 { cd: '担当者', label: '', type: '', visible: true },
-                { cd: '副担当者コード', label: '', type: '', visible: false },
+                { cd: '副担当者コード', label: '', type: '', visible: true },
                 { cd: '副担当者', label: '', type: '', visible: true },
+                { cd: '顧客コード', label: '', type: '', visible: false },
+                { cd: '顧客名', label: '', type: '', visible: false },
+                { cd: '担当者所属コード', label: '', type: '', visible: false },
+                { cd: '担当者所属', label: '', type: '', visible: false },
+                { cd: '副担当者所属コード', label: '', type: '', visible: false },
+                { cd: '副担当者所属', label: '', type: '', visible: false },
             ];
             const STAFF_CHANGE_FIELDCD = {
                 jsonData: { cd: 'JSON', type: 'MULTI_LINE_TEXT', name: 'JSON' },
                 patternName: { cd: 'パターン名', type: 'SINGLE_LINE_TEXT', name: 'パターン名' },
             };
 
+            const SELECTTYPE_NAME_ITEMS = [
+                { cd: '担当者コード名', tyep: '', label: '[担当者コード] 担当者名' },
+                { cd: '副担当者コード名', type: '', label: '[副担当者コード] 副担当者名' },
+                { cd: '顧客コード名', type: '', label: '[顧客コード] 顧客名' },
+                { cd: '担当者所属コード名', type: '', label: '[担当者所属コード] 担当者所属' },
+                { cd: '副担当者所属コード名', type: '', label: '[副担当者所属コード] 副担当者所属' },
+            ];
             const CONF = CONFDATA.CONFIG_DATA ? JSON.parse(CONFDATA.CONFIG_DATA) : '';
 
             const selectedStaffName = computed(() => {
@@ -265,6 +280,8 @@
                     title: 'パターン追加',
                     text: '新しいパターンの名前を入力してください。',
                     inputType: 'text',
+                    confirmButtonText: '実行',
+                    cancelButtonText: 'キャンセル',
                     inputValidator: (value) => validator(value, 'パターン名'),
                 });
                 //console.log('result:', result);
@@ -291,7 +308,7 @@
                     [STAFF_CHANGE_FIELDCD.jsonData.cd]: { value: json },
                     [STAFF_CHANGE_FIELDCD.patternName.cd]: { value: result },
                 };
-                //insertRecords([insertData], utils.constants.THIS_APP_ID);
+                const ref = insertRecords([insertData], utils.constants.THIS_APP_ID);
 
                 // 追加したパターンを一覧に表示
                 let cnt = STATE.patternNames.no + 1;
@@ -310,7 +327,6 @@
                             [staff[1]]: item.datas[PATTERN_NAME_ITEMS[2].cd],
                             [staff[2]]: item.datas[PATTERN_NAME_ITEMS[3].cd],
                             [staff[3]]: item.datas[PATTERN_NAME_ITEMS[4].cd],
-                            //clickData: item.datas.clickData !== undefined ? item.datas.clickData : '',
                         },
                     };
                 });
@@ -367,7 +383,7 @@
                         title: '取得データ一覧',
                         html: tableHtml,
                         showCancelButton: true,
-                        confirmButtonText: 'OK',
+                        confirmButtonText: '実行',
                         cancelButtonText: 'キャンセル',
                         didOpen: () => {
                             setupRowClickHighlighting('patternTable');
@@ -380,36 +396,49 @@
                     }
 
                     // OK処理
+                    // 3つより多い場合はエラー
+                    if (STATE.patternNames.len >= MAX_PATTERN) {
+                        Swal.fire({
+                            title: 'パターン追加',
+                            text: '追加できるパターンは最大' + MAX_PATTERN + 'つまでです。',
+                            icon: 'warning',
+                            confirmButtonText: '閉じる',
+                        });
+                        return;
+                    }
+
                     STATE.listDataPattern.datas = patterns;
-                    console.log('listDataPattern:', STATE.listDataPattern);
+                    //console.log('listDataPattern:', STATE.listDataPattern);
 
                     // データをJSONからオブジェクトに変換してSTATEに保存
                     const jsonData = STATE.listDataPattern.datas[STATE.listDataPattern.clickNo].jsonData;
                     const clickData = JSON.parse(jsonData);
-                    console.log('クリックされた行のデータ:', clickData);
+                    //console.log('クリックされた行のデータ:', clickData);
 
                     // パターン表示
                     let cnt = STATE.patternNames.no + 1;
                     const staff = ['新' + PATTERN_NAME_ITEMS[1].label + cnt, '新' + PATTERN_NAME_ITEMS[2].label + cnt, '新' + PATTERN_NAME_ITEMS[3].label + cnt, '新' + PATTERN_NAME_ITEMS[4].label + cnt];
-                    //STATE.listData.items.push({ code: staff[0], label: PATTERN_NAME_ITEMS[1].label, type: '' });
                     STATE.listData.items.push({ code: staff[1], label: PATTERN_NAME_ITEMS[2].label, type: '' });
-                    //STATE.listData.items.push({ code: staff[2], label: PATTERN_NAME_ITEMS[3].label, type: '' });
                     STATE.listData.items.push({ code: staff[3], label: PATTERN_NAME_ITEMS[4].label, type: '' });
 
+                    // STATE.listData.datasに追加
                     STATE.listData.datas = STATE.listData.datas.map((item) => {
+                        // JSONデータから該当IDのデータを取得
+                        const matched = clickData.find((data) => data['$id'] === item.datas['$id']);
                         return {
                             ...item,
                             datas: {
                                 ...item.datas,
-                                [staff[0]]: item.datas[PATTERN_NAME_ITEMS[1].cd],
-                                [staff[1]]: item.datas[PATTERN_NAME_ITEMS[2].cd],
-                                [staff[2]]: item.datas[PATTERN_NAME_ITEMS[3].cd],
-                                [staff[3]]: item.datas[PATTERN_NAME_ITEMS[4].cd],
-                                jsonData: item.datas.jsonData !== undefined ? item.datas.jsonData : '',
+                                [staff[0]]: matched ? matched[PATTERN_NAME_ITEMS[1].cd] : '',
+                                [staff[1]]: matched ? matched[PATTERN_NAME_ITEMS[2].cd] : '',
+                                [staff[2]]: matched ? matched[PATTERN_NAME_ITEMS[3].cd] : '',
+                                [staff[3]]: matched ? matched[PATTERN_NAME_ITEMS[4].cd] : '',
                             },
                         };
                     });
-                    STATE.patternNames.names.push({ index: cnt, name: result });
+
+                    // パターン追加
+                    STATE.patternNames.names.push({ index: cnt, name: STATE.listDataPattern.clickName });
                     STATE.patternNames.no = cnt;
                     STATE.patternNames.len = STATE.patternNames.len + 1;
 
@@ -445,6 +474,7 @@
                         const relativeIndex = rowsInTbody.indexOf(row);
 
                         STATE.listDataPattern.clickNo = relativeIndex;
+                        STATE.listDataPattern.clickName = row.textContent;
                         console.log('クリックされた行のインデックス:', STATE.listDataPattern.clickNo);
                     });
                 });
@@ -454,50 +484,6 @@
              * フィルタリングされた行を取得
              */
             const filteredRows = computed(() => {
-                /*const testdatas = {
-                    items: [
-                        { code: '顧客コード', label: '顧客コード', type: 'SINGLE_LINE_TEXT' },
-                        { code: '顧客名', label: '顧客名', type: 'SINGLE_LINE_TEXT' },
-                        { code: '担当者コード', label: '担当者コード', type: 'SINGLE_LINE_TEXT' },
-                        { code: '副担当者コード', label: '副担当者コード', type: 'SINGLE_LINE_TEXT' },
-                        { code: '担当者', label: '担当者', type: undefined },
-                        { code: '副担当者', label: '副担当者', type: undefined },
-                    ],
-                    datas: [
-                        {
-                            datas: {
-                                顧客コード: 'C001',
-                                顧客名: 'テスト株式会社',
-                                担当者コード: 'S001',
-                                副担当者コード: 'S002',
-                                担当者: '山田太郎',
-                                副担当者: '鈴木花子',
-                            },
-                        },
-                        {
-                            datas: {
-                                顧客コード: 'C002',
-                                顧客名: 'テスト株式会社',
-                                担当者コード: 'S001',
-                                副担当者コード: 'S002',
-                                担当者: '山田太郎',
-                                副担当者: '鈴木花子',
-                            },
-                        },
-                    ],
-                };
-
-                const filters = { 顧客コード: '', 顧客名: '', 担当者コード: '', 副担当者コード: '', 担当者: '' };*/
-
-                /*return testdatas.datas.filter((item) => {
-                    return Object.keys(filters).every((key) => {
-                        const filterValue = String(filters[key] ?? '').trim();
-                        if (filterValue === '') return true;
-                        const cellValue = String(item.datas[key] ?? '');
-                        return cellValue.includes(filterValue);
-                    });
-                });*/
-
                 if (!STATE.listData?.datas || !Array.isArray(STATE.listData.datas)) return [];
                 return STATE.listData.datas.filter((item) => {
                     return Object.keys(STATE.filters).every((key) => {
@@ -506,10 +492,21 @@
                         //const cellValue = String(item.datas[key] ?? '');
                         let cd = '';
                         let nm = '';
-                        if (key === PATTERN_NAME_ITEMS[2].cd || key === PATTERN_NAME_ITEMS[4].cd) {
+                        if (key === SELECTTYPE_NAME_ITEMS[0].cd) {
+                            cd = PATTERN_NAME_ITEMS[1].cd;
+                            nm = PATTERN_NAME_ITEMS[2].label;
+                        } else if (key === SELECTTYPE_NAME_ITEMS[1].cd) {
+                            cd = PATTERN_NAME_ITEMS[3].cd;
+                            nm = PATTERN_NAME_ITEMS[4].label;
+                        } else if (key === SELECTTYPE_NAME_ITEMS[2].cd) {
+                            cd = PATTERN_NAME_ITEMS[5].cd;
+                            nm = PATTERN_NAME_ITEMS[6].label;
+                        } else {
+                            /*if (key === PATTERN_NAME_ITEMS[2].cd || key === PATTERN_NAME_ITEMS[4].cd || key === PATTERN_NAME_ITEMS[6].cd) {
                             cd = key === PATTERN_NAME_ITEMS[2].cd ? PATTERN_NAME_ITEMS[1].cd : PATTERN_NAME_ITEMS[3].cd;
                             nm = key === PATTERN_NAME_ITEMS[2].cd ? PATTERN_NAME_ITEMS[2].label : PATTERN_NAME_ITEMS[4].label;
-                        } else {
+                        }*/
+
                             // この箇所はメソッドにするかも
                             // 新パターン名での絞込対応
                             const indexes = STATE.patternNames.names.map((item) => item.index);
@@ -527,7 +524,7 @@
                         }
                         const cellValue = key === nm ? item.datas[cd] : item.datas[key] ?? '';
                         if (filterValue === '') return true; // 絞込なし
-                        //if (filterValue === '__EMPTY__') return cellValue === ''; // 空のみ
+                        if (filterValue === '__EMPTY__') return cellValue === ''; // 空のみ
                         return cellValue.toLowerCase().includes(filterValue.toLowerCase());
                     });
                 });
@@ -558,14 +555,27 @@
                     }
                 }
 
-                if (code === PATTERN_NAME_ITEMS[2].cd || code === PATTERN_NAME_ITEMS[4].cd) {
+                // 担当者、副担当者、顧客名のときはコード＋名前で表示
+                if (code === SELECTTYPE_NAME_ITEMS[0].cd) {
+                    cd = PATTERN_NAME_ITEMS[1].cd;
+                    nm = PATTERN_NAME_ITEMS[2].label;
+                } else if (code === SELECTTYPE_NAME_ITEMS[1].cd) {
+                    cd = PATTERN_NAME_ITEMS[3].cd;
+                    nm = PATTERN_NAME_ITEMS[4].label;
+                } else if (code === SELECTTYPE_NAME_ITEMS[2].cd) {
+                    cd = PATTERN_NAME_ITEMS[5].cd;
+                    nm = PATTERN_NAME_ITEMS[6].label;
+                }
+
+                /**if (code === SELECTTYPE_NAME_ITEMS[0].cd || code === SELECTTYPE_NAME_ITEMS[1].cd) {
                     /*const pairs = (STATE.listData?.datas ?? []).map((item) => ({
                         label: '[' + item.datas.担当者コード + ']' + item.datas.担当者,
                         value: item.datas.担当者コード,
                     }));*/
-                    cd = code === PATTERN_NAME_ITEMS[2].cd ? PATTERN_NAME_ITEMS[1].cd : PATTERN_NAME_ITEMS[3].cd;
-                    nm = code === PATTERN_NAME_ITEMS[2].cd ? PATTERN_NAME_ITEMS[2].label : PATTERN_NAME_ITEMS[4].label;
-                    /*if (code === PATTERN_NAME_ITEMS[2].cd) {
+                //cd = code === SELECTTYPE_NAME_ITEMS[0].cd ? PATTERN_NAME_ITEMS[1].cd : PATTERN_NAME_ITEMS[3].cd;
+                //nm = code === SELECTTYPE_NAME_ITEMS[0].cd ? PATTERN_NAME_ITEMS[2].label : PATTERN_NAME_ITEMS[4].label;
+
+                /*if (code === PATTERN_NAME_ITEMS[2].cd) {
                         // 担当者
                         cd = PATTERN_NAME_ITEMS[1].cd;
                         nm = PATTERN_NAME_ITEMS[2].label;
@@ -574,7 +584,8 @@
                         cd = PATTERN_NAME_ITEMS[3].cd;
                         nm = PATTERN_NAME_ITEMS[4].label;
                     }*/
-                }
+                //}
+
                 const pairs = (STATE.listData?.datas ?? [])
                     .filter((item) => item.datas[cd] !== undefined && item.datas[cd] !== null && String(item.datas[cd]).trim() !== '')
                     .map((item) => ({
@@ -588,7 +599,9 @@
                     }
                 });
                 // 配列からオブジェクトに変換して返す
-                return Array.from(unique.entries()).map(([value, label]) => ({ value, label }));
+                const rc = Array.from(unique.entries()).map(([value, label]) => ({ value, label }));
+                return rc;
+
                 // それ以外の項目
                 //const values = (STATE.listData?.datas ?? []).map((item) => item.datas[code]).filter((v) => v !== undefined && v !== null && String(v).trim() !== '');
                 //return [...new Set(values)].map((v) => ({ value: v, label: v }));
@@ -604,11 +617,55 @@
                     return label;
                 } else {
                     if (label === PATTERN_NAME_ITEMS[2].label) {
-                        return '[担当者コード] 担当者名';
+                        return SELECTTYPE_NAME_ITEMS[0].label;
                     } else {
-                        return '[副担当者コード] 副担当者名';
+                        return SELECTTYPE_NAME_ITEMS[1].label;
                     }
                 }
+            };
+
+            /**
+             * コードから表示非表示判定
+             */
+            const isVisibleItem = (key) => {
+                let rc = true;
+
+                // 除外項目
+                const patterns = PATTERN_NAME_ITEMS.filter((item) => item.cd !== '$id').map((cd) => cd.cd);
+                const exccempts = EXCEPT_ITEMS.concat(patterns); // id revision 担当者コード　副担当者コード
+                if (exccempts.includes(key)) {
+                    rc = false;
+                }
+                return rc;
+            };
+
+            /**
+             * ラベルから表示非表示判定
+             */
+            const isVisibleLabel = (label) => {
+                let rc = true;
+
+                // 除外項目
+                const patterns = PATTERN_NAME_ITEMS.filter((item) => item.cd !== '$id').map((cd) => cd.label);
+                const exccempts = EXCEPT_ITEMS.concat(patterns); // id revision 担当者コード　副担当者コード
+                if (exccempts.includes(label)) {
+                    rc = false;
+                }
+                return rc;
+            };
+
+            /**
+             * ラベルから表示非表示判定
+             */
+            const isSelectType = (label) => {
+                let rc = false;
+
+                // 選択項目
+                const select = SELECTTYPE_NAME_ITEMS.map((item) => item.label);
+                if (select.includes(label)) {
+                    rc = true;
+                }
+                return rc;
             };
 
             /**
@@ -679,21 +736,55 @@
                 // 担当者コード　副担当者コードがない場合は追加
                 if (fields.indexOf(PATTERN_NAME_ITEMS[1].cd) === -1) {
                     fields.push(PATTERN_NAME_ITEMS[1].cd);
-                    PATTERN_NAME_ITEMS[1].visible = false;
+                    //PATTERN_NAME_ITEMS[1].visible = false;
                     PATTERN_NAME_ITEMS[1].label = PATTERN_NAME_ITEMS[1].cd;
                 } else {
-                    PATTERN_NAME_ITEMS[1].visible = true;
+                    //PATTERN_NAME_ITEMS[1].visible = true;
                 }
                 if (fields.indexOf(PATTERN_NAME_ITEMS[3].cd) === -1) {
                     fields.push(PATTERN_NAME_ITEMS[3].cd);
-                    PATTERN_NAME_ITEMS[3].visible = false;
+                    // PATTERN_NAME_ITEMS[3].visible = false;
                     PATTERN_NAME_ITEMS[3].label = PATTERN_NAME_ITEMS[3].cd;
                 } else {
-                    PATTERN_NAME_ITEMS[3].visible = true;
+                    //PATTERN_NAME_ITEMS[3].visible = true;
                 }
-
+                STATE.listData.items.push({ code: SELECTTYPE_NAME_ITEMS[0].cd, label: SELECTTYPE_NAME_ITEMS[0].label, type: '' });
+                STATE.listData.items.push({ code: SELECTTYPE_NAME_ITEMS[1].cd, label: SELECTTYPE_NAME_ITEMS[1].label, type: '' });
+                STATE.filters[SELECTTYPE_NAME_ITEMS[0].cd] = '';
+                STATE.filters[SELECTTYPE_NAME_ITEMS[1].cd] = '';
                 //const orderby = SUM_FIELDCD.year.cd + ' asc, ' + SUM_FIELDCD.month.cd + ' asc';
 
+                // 顧客コード　顧客名　は必ず追加
+                if (fields.indexOf(PATTERN_NAME_ITEMS[5]) === -1) {
+                    fields.push(PATTERN_NAME_ITEMS[5].cd);
+                    PATTERN_NAME_ITEMS[5].label = PATTERN_NAME_ITEMS[5].cd;
+                }
+                if (fields.indexOf(PATTERN_NAME_ITEMS[6]) === -1) {
+                    fields.push(PATTERN_NAME_ITEMS[6].cd);
+                    PATTERN_NAME_ITEMS[6].label = PATTERN_NAME_ITEMS[6].cd;
+                }
+                STATE.listData.items.push({ code: SELECTTYPE_NAME_ITEMS[2].cd, label: SELECTTYPE_NAME_ITEMS[2].label, type: '' });
+                STATE.filters[SELECTTYPE_NAME_ITEMS[2].cd] = '';
+                console.log('fields:', fields);
+
+                // 担当者所属　副担当者所属　は必ず追加
+                if (fields.indexOf(ORG_ITEM[0]) === -1) {
+                    fields.push(ORG_ITEM[0]);
+                    PATTERN_NAME_ITEMS[7].label = PATTERN_NAME_ITEMS[7].cd;
+                    PATTERN_NAME_ITEMS[8].label = PATTERN_NAME_ITEMS[8].cd;
+                }
+                if (fields.indexOf(ORG_ITEM[1]) === -1) {
+                    fields.push(ORG_ITEM[1]);
+                    PATTERN_NAME_ITEMS[9].label = PATTERN_NAME_ITEMS[9].cd;
+                    PATTERN_NAME_ITEMS[10].label = PATTERN_NAME_ITEMS[10].cd;
+                }
+                STATE.listData.items.push({ code: SELECTTYPE_NAME_ITEMS[3].cd, label: SELECTTYPE_NAME_ITEMS[3].label, type: '' });
+                STATE.listData.items.push({ code: SELECTTYPE_NAME_ITEMS[4].cd, label: SELECTTYPE_NAME_ITEMS[4].label, type: '' });
+                STATE.filters[SELECTTYPE_NAME_ITEMS[3].cd] = '';
+                STATE.filters[SELECTTYPE_NAME_ITEMS[4].cd] = '';
+                console.log('fields:', fields);
+
+                // レコード取得
                 try {
                     const records = await getRecords(fields, '', '', utils.constants.CUSTOMER_APP_ID);
                     //const items = Object.keys(records[0]).filter((item) => !EXCEPT_ITEMS.includes(item));
@@ -721,12 +812,56 @@
                         items[i].datas[EXCEPT_ITEMS[0]] = rec[EXCEPT_ITEMS[0]].value;
 
                         // 担当者コード　副担当者コードがなかった場合、追加
-                        if (!PATTERN_NAME_ITEMS[1].visible) {
-                            items[i].datas[PATTERN_NAME_ITEMS[1].cd] = rec[PATTERN_NAME_ITEMS[1].cd].value;
+                        //if (!PATTERN_NAME_ITEMS[1].visible) {
+                        //items[i].datas[PATTERN_NAME_ITEMS[1].cd] = rec[PATTERN_NAME_ITEMS[1].cd].value;
+                        //}
+                        //if (!PATTERN_NAME_ITEMS[3].visible) {
+                        //items[i].datas[PATTERN_NAME_ITEMS[3].cd] = rec[PATTERN_NAME_ITEMS[3].cd].value;
+                        //}
+
+                        // 担当者・副担当者・顧客名の[コード] 名称を追加
+                        let wkcode = rec[PATTERN_NAME_ITEMS[1].cd]?.value ?? '';
+                        let wkname = rec[PATTERN_NAME_ITEMS[2].cd]?.value ?? '';
+                        if (wkcode !== '' && wkname !== '') {
+                            items[i].datas[SELECTTYPE_NAME_ITEMS[0].cd] = '[' + wkcode + ']' + wkname;
+                        } else {
+                            items[i].datas[SELECTTYPE_NAME_ITEMS[0].cd] = '';
                         }
-                        if (!PATTERN_NAME_ITEMS[3].visible) {
-                            items[i].datas[PATTERN_NAME_ITEMS[3].cd] = rec[PATTERN_NAME_ITEMS[3].cd].value;
+
+                        // 副担当者
+                        wkcode = rec[PATTERN_NAME_ITEMS[3].cd]?.value ?? '';
+                        wkname = rec[PATTERN_NAME_ITEMS[4].cd]?.value ?? '';
+                        if (wkcode !== '' && wkname !== '') {
+                            items[i].datas[SELECTTYPE_NAME_ITEMS[1].cd] = '[' + wkcode + ']' + wkname;
+                        } else {
+                            items[i].datas[SELECTTYPE_NAME_ITEMS[1].cd] = '';
                         }
+
+                        // 顧客名
+                        wkcode = rec[PATTERN_NAME_ITEMS[5].cd]?.value ?? '';
+                        wkname = rec[PATTERN_NAME_ITEMS[6].cd]?.value ?? '';
+                        if (wkcode !== '' && wkname !== '') {
+                            items[i].datas[SELECTTYPE_NAME_ITEMS[2].cd] = '[' + wkcode + ']' + wkname;
+                        } else {
+                            items[i].datas[SELECTTYPE_NAME_ITEMS[2].cd] = '';
+                        }
+
+                        // 担当者所属
+                        if (utils.common.containsKey(rec, ORG_ITEM[0]) && Array.isArray(rec[ORG_ITEM[0]].value) && rec[ORG_ITEM[0]].value.length > 0) {
+                            wkcode = rec[ORG_ITEM[0]].value[0].code;
+                            wkname = rec[ORG_ITEM[0]].value[0].name;
+                        } else {
+                            wkcode = '';
+                            wkname = '';
+                        }
+                        items[i].datas[PATTERN_NAME_ITEMS[7].cd] = wkcode; // 所属はコード
+                        items[i].datas[PATTERN_NAME_ITEMS[8].label] = wkname; // 所属は名称
+                        if (wkcode !== '' && wkname !== '') {
+                            items[i].datas[SELECTTYPE_NAME_ITEMS[3].cd] = '[' + wkcode + ']' + wkname;
+                        } else {
+                            items[i].datas[SELECTTYPE_NAME_ITEMS[3].cd] = '';
+                        }
+                        //STATE.filters['副担当者コード名'] = '';
                         i++;
                     });
                     STATE.listData.datas = items;
@@ -756,6 +891,9 @@
                 getUniqueOptions,
                 setNewLabel,
                 makeNewItemName,
+                isVisibleItem,
+                isVisibleLabel,
+                isSelectType,
                 //patternName,
             };
         },
@@ -780,18 +918,18 @@
                         <pattern-set :pattern="STATE.patternNames.names" :colspan="STATE.listData.items?STATE.listData.items.length-(STATE.patternNames.len*2):0" />
                         <tr>
                             <template v-for="field in STATE.listData.items" :key="field">
-                                <th v-if="field!=='$revision'&& (field.label!=='担当者コード' && field.label!=='副担当者コード')">
+                                <th v-if="isVisibleLabel(field.label)">
                                     <div>{{ setNewLabel(field.label) }}</div>
                                     <div>
                                         <!-- 追加したあと、データにすべてを設定する -->
-                                        <template v-if="field.label !== '担当者' && field.label !== '副担当者'">
+                                        <template v-if="!(isSelectType(field.label))">
                                             <input type="text" v-model="STATE.filters[field.code]" />
                                         </template>
                                         <template v-else>
                                             <select v-model="STATE.filters[field.code]">
                                                 <option value="">すべて</option>
                                                 <option v-for="option in getUniqueOptions(field.code)" :key="option.value" :value="option.value">{{ option.label }}</option>
-                                                <!--<option value="__EMPTY__">空</option>-->
+                                                <option value="__EMPTY__">未設定</option>
                                             </select>
                                         </template>
                                     </div>
@@ -804,7 +942,7 @@
                         <template v-for="field in filteredRows" :key="field">
                             <tr>
                                 <template v-for="key in STATE.listData.items" :key="key">
-                                    <td v-if="key!=='$revision' && (key.code!=='担当者コード' && key.code!=='副担当者コード')"><!--{{makeNewItemName(key.code)!==''?makeNewItemName(key.code).nm:''}}:-->{{field.datas[key.code]}}</td>
+                                    <td v-if="isVisibleItem(key.code)"><!--{{makeNewItemName(key.code)!==''?makeNewItemName(key.code).nm:''}}:-->{{field.datas[key.code]}}</td>
                                 </template>
                             </tr>
                         </template>
