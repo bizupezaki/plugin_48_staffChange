@@ -8,7 +8,8 @@
     //luxon.Settings.defaultLocale = 'ja';
     //const TODAY = DateTime.local().startOf('day');
 
-    let CUSTOMER_APP_ID = '85'; // 顧客カルテアプリのアプリIDを指定
+    const CUSTOMER_APP_ID = '85'; // 顧客カルテアプリのアプリIDを指定
+    const STAFF_APP_ID = '93'; // 担当者アプリのアプリIDを指定
 
     window.bizupUtil = window.bizupUtil || {};
     window.bizupUtil.constants = {
@@ -16,5 +17,6 @@
         THIS_APP_ID: kintone.app.getId(), // 現在のアプリID
         //TODAY: TODAY, // 今日の日付
         CUSTOMER_APP_ID: CUSTOMER_APP_ID, // 顧客カルテアプリのアプリID
+        STAFF_APP_ID: STAFF_APP_ID, // 担当者アプリのアプリID
     };
 })();
