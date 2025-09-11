@@ -30,6 +30,7 @@
         td {
             border-top-style: none;
             border-left-style: none;
+            white-space: nowrap;
         }
 
         tr {
@@ -37,5 +38,9 @@
                 background-color: #ccc;
             }
         }
+    }
+    // 後に変数で指定できるようにする
+    .highlighted {
+        background-color: #ffeeba;
     }
 }
