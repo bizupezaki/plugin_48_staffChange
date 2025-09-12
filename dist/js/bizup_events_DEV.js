@@ -20,6 +20,9 @@
     const utils = window.bizupUtil; // 共通ユーティリティ
     const MAX_PATTERN = 3; // 追加パターンの最大数
     const HIGHTLIGHT_COLOR = '#ffecb3'; // ハイライトカラー
+    const PATTERN_TITLE_COLOR = ['#FFFF00', '#64D2F0', '#92D050']; // パターンタイトルカラー
+    const PATTERN_ITEMS_COLOR = ['#FFF2CC', '#DDEBF7', '#E2EFDA']; // 担当者選択カラー
+    const PATTERN_CHANGE_COLOR = '#FFC000'; // 項目カラー
 
     // console.log(CONF);
 
@@ -86,7 +89,7 @@
         template: `
             <tr v-if="pattern && pattern.length!==0">
                 <th :colspan="colspan"></th>
-                <th v-for="(item,index) in pattern" :key="index" colspan="4">
+                <th v-for="(item,index) in pattern" :key="index" colspan="4" :style="{ backgroundColor: item.titleColor }">
                         {{item.name}} 
                         <button @click="save(item)" class="bz_bt_def">保存</button>
                 </th>
@@ -154,10 +157,8 @@
                 ],
                 listData: {},
                 listDataPattern: { clickNo: null, datas: [], clickName: '' },
-                //patternNames: { len: 0, no: 0, maxlength: 3, names: [] },
                 patternNames: { len: 0, index: 1, maxlength: MAX_PATTERN, names: [] },
                 selectStaffs: [], // 担当者マスタの全データ
-                //selectOrganizations: [], // 表示用所属select
                 testSelectedStaff: null,
                 selectedStaff: null,
                 filters: {}, // 絞り込み条件
@@ -205,11 +206,6 @@
                 const staff = STATE.testData.find((s) => s.code === STATE.testSelectedStaff);
                 return staff ? staff.name : '';
             });
-
-            /*const patternName = computed(() => {
-                console.log('test');
-                return STATE.patternName ? STATE.patternName : '';
-            });*/
 
             /**
              * v-select用フィルタ
@@ -262,9 +258,7 @@
 
             /**
              * 新規追加
-             * @param {array} fields 取得フィールド
-             * @param {string} condition 検索条件
-             * @param {string} orderby ソート順
+             * @param {array} data 登録データ
              * @param {number} appId アプリID
              * @returns {} res レコード
              */
@@ -283,17 +277,23 @@
                 }
             };
 
-            const updateRecords = async (updateData, appId) => {
+            /**
+             * 更新
+             * @param {array} data 更新データ
+             * @param {number} appId アプリID
+             * @returns {} res レコード
+             */
+            const updateRecords = async (data, appId) => {
                 console.log('updateData');
 
                 let res = null;
                 try {
-                    res = await utils.recordUtils.updateRecords(updateData, appId);
+                    res = await utils.recordUtils.updateRecords(data, appId);
                     if (res.length === 0) {
                         //console.log(jyoken, ':該当データなし！');
-                        console.log(updateData, ':該当データなし！（updateRecords）', res);
+                        console.log(data, ':該当データなし！（updateRecords）', res);
                     } else {
-                        console.log(updateData, ':更新完了！（updateRecords）', res);
+                        console.log(data, ':更新完了！（updateRecords）', res);
                     }
                     return res;
                 } catch (error) {
@@ -424,10 +424,10 @@
 
                 //STATE.listData.items.push({ code: staff[3], label: PATTERN_NAME_ITEMS[4].label, type: '' });
 
-                const wkStaff = staff[0] + '_' + cnt;
-                const wkSubStaff = subStaff[0] + '_' + cnt;
-                const wkDepartment = department[0] + '_' + cnt;
-                const wkSubDepartment = subDepartment[0] + '_' + cnt;
+                const wkStaff = staff[0] + '_' + 'vmodel';
+                const wkSubStaff = subStaff[0] + '_' + 'vmodel';
+                const wkDepartment = department[0] + '_' + 'vmodel';
+                const wkSubDepartment = subDepartment[0] + '_' + 'vmodel';
 
                 // 現役の担当者取得
                 const staffsCode = STATE.selectStaffs.map((s) => s[STAFFMASTER_FIELD.staffCode.cd]);
@@ -465,7 +465,16 @@
                         },
                     };
                 });
-                STATE.patternNames.names.push({ index: cnt, name: result, id: ref.records[0].id, revision: ref.records[0].revision });
+                STATE.patternNames.names.push({
+                    index: cnt,
+                    name: result,
+                    id: ref.records[0].id,
+                    revision: ref.records[0].revision,
+                    titleColor: PATTERN_TITLE_COLOR[cnt - 1],
+                    itemsColor: PATTERN_ITEMS_COLOR[cnt - 1],
+                });
+
+                // アイテムカラーを追加
                 //STATE.patternNames.no = cnt;
                 STATE.patternNames.len = cnt;
 
@@ -478,7 +487,6 @@
                 //STATE.filters[subStaff[2]] = '';
                 STATE.filters[department[0]] = '';
                 STATE.filters[subDepartment[0]] = '';
-                // selectのキーを設定
             };
 
             /**
@@ -571,10 +579,10 @@
                     STATE.listData.items.push({ code: staff[1], label: PATTERN_NAME_ITEMS[2].label, type: '' });
                     STATE.listData.items.push({ code: staff[3], label: PATTERN_NAME_ITEMS[4].label, type: '' });*/
 
-                    const wkStaff = staff[0] + '_' + cnt;
-                    const wkSubStaff = subStaff[0] + '_' + cnt;
-                    const wkDepartment = department[0] + '_' + cnt;
-                    const wkSubDepartment = subDepartment[0] + '_' + cnt;
+                    const wkStaff = staff[0] + '_' + 'vmodel';
+                    const wkSubStaff = subStaff[0] + '_' + 'vmodel';
+                    const wkDepartment = department[0] + '_' + 'vmodel';
+                    const wkSubDepartment = subDepartment[0] + '_' + 'vmodel';
 
                     // 現役の担当者取得
                     const staffsCode = STATE.selectStaffs.map((s) => s[STAFFMASTER_FIELD.staffCode.cd]);
@@ -619,7 +627,14 @@
                     });
 
                     // パターン追加
-                    STATE.patternNames.names.push({ index: cnt, name: STATE.listDataPattern.clickName, id: STATE.listDataPattern.datas[STATE.listDataPattern.clickNo].id, revision: STATE.listDataPattern.datas[STATE.listDataPattern.clickNo].revision });
+                    STATE.patternNames.names.push({
+                        index: cnt,
+                        name: STATE.listDataPattern.clickName,
+                        id: STATE.listDataPattern.datas[STATE.listDataPattern.clickNo].id,
+                        revision: STATE.listDataPattern.datas[STATE.listDataPattern.clickNo].revision,
+                        titleColor: PATTERN_TITLE_COLOR[cnt - 1],
+                        itemsColor: PATTERN_ITEMS_COLOR[cnt - 1], // アイテムカラーを追加
+                    });
                     //STATE.patternNames.no = cnt;
                     STATE.patternNames.len = cnt;
 
@@ -628,10 +643,6 @@
                     STATE.filters[subStaff[0]] = '';
                     STATE.filters[department[0]] = '';
                     STATE.filters[subDepartment[0]] = '';
-                    /*STATE.filters[staff[0]] = '';
-                    STATE.filters[staff[1]] = '';
-                    STATE.filters[staff[2]] = '';
-                    STATE.filters[staff[3]] = '';*/
                 } catch (error) {
                     console.error('openPattern取得失敗:', error);
                 }
@@ -639,6 +650,7 @@
 
             /**
              * パターン保存
+             * @param {object} item パターンオブジェクト
              */
             const savePattern = async (item) => {
                 //const item.index;
@@ -712,7 +724,7 @@
 
                         STATE.listDataPattern.clickNo = relativeIndex;
                         STATE.listDataPattern.clickName = row.textContent;
-                        console.log('クリックされた行のインデックス:', STATE.listDataPattern.clickNo);
+                        //console.log('クリックされた行のインデックス:', STATE.listDataPattern.clickNo);
                     });
                 });
             };
@@ -808,13 +820,6 @@
                         nm = '新' + PATTERN_NAME_ITEMS[10].label + num;
                         departmentFlg[1] = true;
                     }
-                    /*if (str === '新' + PATTERN_NAME_ITEMS[2].cd) {
-                        cd = '新' + PATTERN_NAME_ITEMS[1].cd + num;
-                        nm = '新' + PATTERN_NAME_ITEMS[2].label + num;
-                    } else if (str === '新' + PATTERN_NAME_ITEMS[4].cd) {
-                        cd = '新' + PATTERN_NAME_ITEMS[3].cd + num;
-                        nm = '新' + PATTERN_NAME_ITEMS[4].label + num;
-                    }*/
                 }
 
                 // 担当者、副担当者、顧客名のときはコード＋名前で表示
@@ -840,24 +845,6 @@
                     nm = PATTERN_NAME_ITEMS[10].label;
                 }
 
-                /**if (code === SELECTTYPE_NAME_ITEMS[0].cd || code === SELECTTYPE_NAME_ITEMS[1].cd) {
-                    /*const pairs = (STATE.listData?.datas ?? []).map((item) => ({
-                        label: '[' + item.datas.担当者コード + ']' + item.datas.担当者,
-                        value: item.datas.担当者コード,
-                    }));*/
-                //cd = code === SELECTTYPE_NAME_ITEMS[0].cd ? PATTERN_NAME_ITEMS[1].cd : PATTERN_NAME_ITEMS[3].cd;
-                //nm = code === SELECTTYPE_NAME_ITEMS[0].cd ? PATTERN_NAME_ITEMS[2].label : PATTERN_NAME_ITEMS[4].label;
-
-                /*if (code === PATTERN_NAME_ITEMS[2].cd) {
-                        // 担当者
-                        cd = PATTERN_NAME_ITEMS[1].cd;
-                        nm = PATTERN_NAME_ITEMS[2].label;
-                    } else {
-                        // 副担当者
-                        cd = PATTERN_NAME_ITEMS[3].cd;
-                        nm = PATTERN_NAME_ITEMS[4].label;
-                    }*/
-                //}
                 let pairs = [];
                 if (code === SELECTTYPE_NAME_ITEMS[0].cd || code === SELECTTYPE_NAME_ITEMS[1].cd || staffFlg.some((f) => f)) {
                     // 担当者選択のときはスタッフマスタから取得
@@ -968,25 +955,6 @@
                     return 0;
                 });
 
-                /*const pairs = (STATE.listData?.datas ?? [])
-                    .filter((item) => item.datas[cd] !== undefined && item.datas[cd] !== null && String(item.datas[cd]).trim() !== '')
-                    .map((item) => ({
-                        label: '[' + item.datas[cd] + ']' + item.datas[nm],
-                        value: item.datas[cd],
-                    }));
-                const unique = new Map();
-                pairs.forEach((pair) => {
-                    if (!unique.has(pair.value)) {
-                        unique.set(pair.value, pair.label);
-                    }
-                });
-                // 配列からオブジェクトに変換して返す
-                let rc = Array.from(unique.entries()).map(([value, label]) => ({ value, label }));
-                rc = rc.sort((a, b) => {
-                    if (a.value < b.value) return -1;
-                    if (a.value > b.value) return 1;
-                    return 0;
-                });*/
                 return rc;
 
                 // それ以外の項目
@@ -1013,6 +981,8 @@
 
             /**
              * コードから表示非表示判定
+             * @param {string} key コード
+             * @return {boolean} true:表示、false:非表示
              */
             const isVisibleItem = (key) => {
                 let rc = true;
@@ -1028,6 +998,8 @@
 
             /**
              * ラベルから表示非表示判定
+             * @param {string} label ラベル
+             * @return {boolean} true:表示、false:非表示
              */
             const isVisibleLabel = (label) => {
                 let rc = true;
@@ -1038,12 +1010,14 @@
                 if (exccempts.includes(label)) {
                     rc = false;
                 }
-                console.log('isVisibleLabel:', code, ' rc:', rc);
+                //console.log('isVisibleLabel:', code, ' rc:', rc);
                 return rc;
             };
 
             /**
              * ラベルから表示非表示判定
+             * @param {string} label ラベル
+             * @return {boolean} true:選択項目、false:テキスト項目
              */
             const isSelectType = (label) => {
                 let rc = false;
@@ -1056,7 +1030,11 @@
                 return rc;
             };
 
-            // keyが新担当者コード名、新副担当者コード名のときは、trueをかえす
+            /**
+             * keyが新担当者コード名、新副担当者コード名のときは、trueをかえす
+             * @param {string} key コード
+             * @return {boolean} true:新担当者コード名 or 新副担当者コード名　false:それ以外
+             */
             const isSelectData = (key) => {
                 let rc = false;
                 const indexes = STATE.patternNames.names.map((item) => item.index);
@@ -1073,10 +1051,19 @@
                 return rc;
             };
 
-            // 番号設定
-            const setNo = (index, key) => {
+            /**
+             * selectのv-model用のkeyを返す
+             * @param {string} key コード
+             * @return {string} v-model用key
+             */
+            const setSelectVmodel = (key) => {
+                /*console.log('setNo index:', index, ' key:', key);
+                console.log('STATE.itemLength:', STATE.itemLength);
+                console.log('STATE.listData.items.length:', STATE.listData.items.length);
+                console.log('STATE.patternNames.len:', STATE.patternNames.len);*/
                 let rc = '';
-                let name = key;
+                rc = key + '_' + 'vmodel'; // v-model用
+                /*let name = key;
                 let sa = index - STATE.itemLength;
                 if (sa <= 3) {
                     rc = '1';
@@ -1085,18 +1072,25 @@
                 } else {
                     rc = '3';
                 }
-                return name + '_' + rc;
+                return name + '_' + rc;*/
             };
+
             /**
              * パターンを追加したデータはすべてselectにする
+             * @param {string} key コード
+             * @return {}
              */
             const getSelectedStaff = (key) => {
                 return [...new Set(STATE.listData.datas.map((item) => item.datas[key]))];
             };
+
             /**
-             * 担当者選択変更
+             * 担当者選択変更時の処理
+             * @param {number} index 行番号
+             * @param {object} event イベント
+             * @param {string} key コード
              */
-            const changeStaff = (index, event, key) => {
+            const changeStaff = (id, event, key) => {
                 // 取得したデータをcodeとnameに分割
                 // 例: [10002]鈴木 二美 → code: 10002, name: 鈴木 二美
                 const value = event.target.value;
@@ -1107,6 +1101,11 @@
                     code = match[1];
                     name = match[2];
                 }
+
+                // id からindexを取得
+                const index = STATE.listData.datas.findIndex((item) => item.datas['$id'] === id);
+                if (index === -1) return;
+
                 STATE.listData.datas[index].datas[key] = value;
                 const num = Number(key.match(/\d+/)); // 数値のみ取得
                 const str = key.replace(/\d+/g, ''); // 数値部分削除
@@ -1133,16 +1132,67 @@
                 STATE.listData.datas[index].datas[nm] = name;
 
                 // 担当者変更に伴って、所属も変更する
-                const staff = STATE.selectStaffs.find((staff) => staff[STAFFMASTER_FIELD.staffCode.cd] === code);
-                const orgs = staff[STAFFMASTER_FIELD.organization.cd];
-                STATE.listData.datas[index].datas[org] = '[' + orgs[0].code + ']' + orgs[0].name;
-                STATE.listData.datas[index].datas[orgCd] = orgs[0].code;
-                STATE.listData.datas[index].datas[orgNm] = orgs[0].name;
+                if (code !== '') {
+                    const staff = STATE.selectStaffs.find((staff) => staff[STAFFMASTER_FIELD.staffCode.cd] === code);
+                    const orgs = staff[STAFFMASTER_FIELD.organization.cd];
+                    STATE.listData.datas[index].datas[org] = '[' + orgs[0].code + ']' + orgs[0].name;
+                    STATE.listData.datas[index].datas[orgCd] = orgs[0].code;
+                    STATE.listData.datas[index].datas[orgNm] = orgs[0].name;
+                } else {
+                    // 空の場合は所属も空にする
+                    STATE.listData.datas[index].datas[org] = '';
+                    STATE.listData.datas[index].datas[orgCd] = '';
+                    STATE.listData.datas[index].datas[orgNm] = '';
+                }
                 //console.log('changeStaff:', index, event, key, ' code:', code, ' name:', name, ' cd:', cd, ' nm:', nm);
             };
 
             /**
+             * コードから背景色を設定
+             * @param {string} key コード
+             * @return {string} 背景色
+             */
+            const setTitleBackColor = (key) => {
+                const num = Number(key.match(/\d+/)); // 数値のみ取得
+                const str = key.replace(/\d+/g, ''); // 数値部分削除
+                const pattern = ['新' + SELECTTYPE_NAME_ITEMS[0].cd, '新' + SELECTTYPE_NAME_ITEMS[1].cd, '新' + SELECTTYPE_NAME_ITEMS[3].cd, '新' + SELECTTYPE_NAME_ITEMS[4].cd];
+
+                let color = '';
+                if (pattern.includes(str)) {
+                    //const index = pattern.findIndex((p) => p === str);
+                    color = PATTERN_TITLE_COLOR[num - 1];
+                }
+                return color;
+            };
+            /**
+             * コードから背景色を設定
+             * @param {string} key コード
+             * @return {string} 背景色
+             */
+            const setItemBackColor = (key, datas) => {
+                const num = Number(key.match(/\d+/)); // 数値のみ取得
+                const str = key.replace(/\d+/g, ''); // 数値部分削除
+                const patterns = ['新' + SELECTTYPE_NAME_ITEMS[0].cd, '新' + SELECTTYPE_NAME_ITEMS[1].cd, '新' + SELECTTYPE_NAME_ITEMS[3].cd, '新' + SELECTTYPE_NAME_ITEMS[4].cd];
+                const items = SELECTTYPE_NAME_ITEMS.filter((item) => item.cd !== SELECTTYPE_NAME_ITEMS[2].cd);
+
+                // 背景色
+                let color = '';
+                if (patterns.includes(str)) {
+                    color = PATTERN_ITEMS_COLOR[num - 1];
+                }
+                // 表示用とデータが違う場合、背景色を変更する
+                const index = patterns.findIndex((p) => p === str);
+                if (index !== -1 && color !== '') {
+                    if (datas[items[index].cd] !== datas[key]) {
+                        color = PATTERN_CHANGE_COLOR;
+                    }
+                }
+                return color;
+            };
+
+            /**
              * コードから新たな項目名を作成
+             * @param {string} key コード
              */
             const makeNewItemName = (key) => {
                 const indexes = STATE.patternNames.names.map((item) => item.index);
@@ -1206,7 +1256,7 @@
                 fields.push(EXCEPT_ITEMS[0]);
                 fields.push(EXCEPT_ITEMS[1]);
 
-                let itemCount = 0;
+                let itemCount = 0; // 余分な項目をカウント
                 //let staffCount = 0;
                 // 担当者コード　副担当者コードがない場合は追加
                 if (fields.indexOf(PATTERN_NAME_ITEMS[1].cd) === -1) {
@@ -1386,7 +1436,7 @@
                         i++;
                     });
                     STATE.listData.datas = items;
-                    STATE.itemLength = STATE.listData.items.length;
+                    STATE.itemLength = STATE.listData.items.length - itemCount - 2;
                     // 各配列の末尾に担当者・副担当者データを追加
                     /*STATE.listData.datas.forEach((item) => {
                         if (item.datas['担当者'] !== undefined) {
@@ -1483,16 +1533,18 @@
                 filteredRows,
                 getUniqueOptions,
                 setNewLabel,
-                makeNewItemName,
+                //makeNewItemName,
                 isVisibleItem,
-                isVisibleLabel,
+                //isVisibleLabel,
                 isSelectType,
                 isSelectData,
-                getSelectedStaff,
-                setNo,
+                //getSelectedStaff,
+                //setSelectVmodel,
                 changeStaff,
                 savePattern,
                 //patternName,
+                setTitleBackColor,
+                setItemBackColor,
             };
         },
         template: /* HTML */ `
@@ -1509,12 +1561,12 @@
             <div id="bz_events_main_container">
                 <table class="bz_table_def">
                     <thead>
-                        <pattern-set @savePattern="savePattern" :pattern="STATE.patternNames.names" :colspan="STATE.listData.items?STATE.listData.items.length-(4*STATE.patternNames.len)-2:0" />
+                        <pattern-set @savePattern="savePattern" :pattern="STATE.patternNames.names" :colspan="STATE.itemLength?STATE.itemLength:0" />
 
                         <tr>
                             <!--{{STATE.listData.items?STATE.listData.items.length:''}}:{{STATE.listData.items?STATE.patternNames.len:''}}-->
                             <template v-for="field in STATE.listData.items" :key="field">
-                                <th v-if="isVisibleItem(field.code)">
+                                <th v-if="isVisibleItem(field.code)" :style="{backgroundColor:setTitleBackColor(field.code)}">
                                     <div>{{ setNewLabel(field.label) }}</div>
                                     <div>
                                         <!-- 追加したあと、データにすべてを設定する -->
@@ -1538,11 +1590,12 @@
                         <template v-for="(field,index) in filteredRows" :key="field">
                             <tr>
                                 <template v-for="(key,itemIndex) in STATE.listData.items" :key="key">
-                                    <td v-if="isVisibleItem(key.code)">
+                                    <td v-if="isVisibleItem(key.code)" :style="{backgroundColor:setItemBackColor(key.code,field.datas)}">
+                                        <!--{{key.code + '_' + 'vmodel'}}:{{setNo(itemIndex,key.code)}}:{{key.code+'_'+index}}:{{index}}-->
                                         <!--test:{{isSelectData(key.code)}}:{{key.code}}-->
                                         <!--{{makeNewItemName(key.code)!==''?makeNewItemName(key.code).nm:''}}:-->
                                         <template v-if="isSelectData(key.code)">
-                                            <select v-model="field.datas[setNo(itemIndex,key.code)]" @change="changeStaff(index,$event,key.code)">
+                                            <select v-model="field.datas[key.code + '_' + 'vmodel']" @change="changeStaff(field.datas.$id,$event,key.code)">
                                                 <!--(index-STATE.itemLength<=1?'1':'2')-->
                                                 <!--:filter="customFilter"-->
                                                 <!--<option v-for="staff in getSelectedStaff(key.code)" :key="staff" :value="staff">{{ staff }}</option>-->
