@@ -85,12 +85,13 @@
     // パターン追加テーブル
     const setPattern = {
         props: ['pattern', 'colspan'],
-        emits: ['savePattern'],
+        emits: ['savePattern', 'replaceAllPattern'],
         template: `
             <tr v-if="pattern && pattern.length!==0">
                 <th :colspan="colspan"></th>
                 <th v-for="(item,index) in pattern" :key="index" colspan="4" :style="{ backgroundColor: item.titleColor }">
                         {{item.name}} 
+                        <button @click="replaceAll(item)" class="bz_bt_def">一括置換</button>
                         <button @click="save(item)" class="bz_bt_def">保存</button>
                 </th>
             </tr>
@@ -98,6 +99,9 @@
         methods: {
             save(item) {
                 this.$emit('savePattern', item);
+            },
+            replaceAll(item) {
+                this.$emit('replaceAllPattern', item);
             },
         },
     };
@@ -330,7 +334,7 @@
                     const result = await Swal.fire({
                         title: title,
                         text: text,
-                        input: inputType, // 'text', 'email', 'number', 'password', 'textarea', 'select', 'radio', 'checkbox', 'file'
+                        input: inputType || undefined, // 'text', 'email', 'number', 'password', 'textarea', 'select', 'radio', 'checkbox', 'file'
                         showCancelButton: true,
                         confirmButtonText: confirmButtonText,
                         cancelButtonText: cancelButtonText,
@@ -701,6 +705,131 @@
                 }
             };
 
+            /**
+             * 一括置換画面HTML作成
+             * @return {string} html
+             */
+            const replaceAllHTML = (staffs, staffsNew) => {
+                const html = `
+                <div style="display: grid; grid-template-columns: 200px 1fr; gap: 32px;">
+                    <!-- 左側：ラジオボタン -->
+                    <div style="display: flex; flex-direction: column; align-items:flex-start; gap: 16px;">
+                        <label><input type="radio" name="staffRadio" value="current" checked> 現在の担当者</label>
+                        <label><input type="radio" name="staffRadio" value="pattern"> パターンAの担当者</label>
+                    </div>
+                    <!-- 右側：担当者選択 -->
+                    <div style="display: flex; align-items: center;">
+                        <select id="staffSelect">
+                            ${staffs}
+                            <!--<option v-for="option in getStaffList(selectedStaff)" :key="option.value" :value="option.value">{{ option.label }}</option>-->
+                        </select>
+                        <!--<select id="patternAStaffSelect"></select>-->
+                    </div>
+                </div>
+
+                <div style="text-align:center; width:100%; margin:8px 0;">
+                    <span style="font-size:24px;">↓</span>
+                </div>
+
+                <!-- 変更後担当者選択 -->
+                <div style="display: grid; grid-template-columns: 200px 1fr; gap: 32px;">
+                    <span style="text-align: left;">変更後の担当者</span>
+                    <select id="afterStaffSelect">
+                        ${staffsNew}
+                    </select>
+                </div>
+            `;
+                return html;
+            };
+
+            /**
+             * パターンを一括置換
+             * @param {object} item パターンオブジェクト
+             */
+            const replaceAllPattern = async (item) => {
+                // 担当者取得
+                const staffsCode = getUniqueOptions(SELECTTYPE_NAME_ITEMS[0].cd);
+                const wk = '新' + SELECTTYPE_NAME_ITEMS[0].cd + item.index;
+                const staffsCodeNew = getUniqueOptions(wk);
+
+                let optionStaffs = staffsCode.map((opt) => `<option value="${opt.value}" key="${opt.value}">${opt.label}</option>`).join('');
+                optionStaffs = optionStaffs + `<option value="__EMPTY__">未設定</option>`;
+                let optionStaffsNew = staffsCodeNew.map((opt) => `<option value="${opt.value}" key="${opt.value}">${opt.label}</option>`).join('');
+                optionStaffsNew = optionStaffsNew + `<option value="__EMPTY__">未設定</option>`;
+
+                // 一括置換画面HTML作成
+                const html = replaceAllHTML(optionStaffs, optionStaffsNew);
+
+                const setupBulkReplaceDialogEvents = () => {
+                    // イベント設定
+                    const radioButtons = Swal.getPopup().querySelectorAll('input[name="staffRadio"]');
+                    const select = Swal.getPopup().querySelector('#staffSelect');
+                    radioButtons.forEach((radio) => {
+                        radio.addEventListener('change', (event) => {
+                            let options = '';
+                            if (event.target.value === 'current') {
+                                // 現在の担当者
+                                options = staffsCode.map((opt) => `<option value="${opt.value}" key="${opt.value}">${opt.label}</option>`).join('');
+                            } else if (event.target.value === 'pattern') {
+                                // パターンの担当者
+                                options = staffsCodeNew.map((opt) => `<option value="${opt.value}" key="${opt.value}">${opt.label}</option>`).join('');
+                            }
+                            options = options + `<option value="__EMPTY__">未設定</option>`;
+                            select.innerHTML = options;
+                        });
+                    });
+                };
+
+                const result = await Swal.fire({
+                    title: '一括置換',
+                    html: html,
+                    showCancelButton: true,
+                    confirmButtonText: '実行',
+                    cancelButtonText: 'キャンセル',
+                    didOpen: setupBulkReplaceDialogEvents,
+                    preConfirm: () => {
+                        const selectedRadio = Swal.getPopup().querySelector('input[name="staffRadio"]:checked');
+                        const selectedStaff = Swal.getPopup().querySelector('#staffSelect').value;
+
+                        const afterStaff = Swal.getPopup().querySelector('#afterStaffSelect').value;
+                        if (!selectedStaff) {
+                            Swal.showValidationMessage('置換元の担当者を選択してください');
+                            return false;
+                        }
+                        if (!afterStaff) {
+                            Swal.showValidationMessage('変更後の担当者を選択してください');
+                            return false;
+                        }
+                        return { selectedRadio: selectedRadio ? selectedRadio.value : null, selectedStaff, afterStaff };
+                    },
+
+                    //width: '80%',
+                });
+
+                //console.log('result:', result);
+                if (result === null) {
+                    // キャンセルの場合
+                    return;
+                }
+            };
+
+            /**
+             * 一括置換担当者リスト取得
+             * @param {string} tableId テーブルID
+             * @param {string} highlightClass ハイライトカラー
+             */
+            const getStaffList = (selectedStaff) => {
+                let code = '';
+                if ('current' === selectedStaff) {
+                    code = SELECTTYPE_NAME_ITEMS[0].cd;
+                } else {
+                    const num = Number(selectedStaff.match(/\d+/));
+                    code = '新' + SELECTTYPE_NAME_ITEMS[0].cd + num;
+                }
+
+                const rc = getUniqueOptions(code);
+                return rc;
+            };
             /**
              * 行クリックでハイライト設定
              * @param {string} tableId テーブルID
@@ -1532,6 +1661,7 @@
                 openPattern,
                 filteredRows,
                 getUniqueOptions,
+                getStaffList,
                 setNewLabel,
                 //makeNewItemName,
                 isVisibleItem,
@@ -1542,6 +1672,7 @@
                 //setSelectVmodel,
                 changeStaff,
                 savePattern,
+                replaceAllPattern,
                 //patternName,
                 setTitleBackColor,
                 setItemBackColor,
@@ -1561,7 +1692,7 @@
             <div id="bz_events_main_container">
                 <table class="bz_table_def">
                     <thead>
-                        <pattern-set @savePattern="savePattern" :pattern="STATE.patternNames.names" :colspan="STATE.itemLength?STATE.itemLength:0" />
+                        <pattern-set @savePattern="savePattern" @replaceAllPattern="replaceAllPattern" :pattern="STATE.patternNames.names" :colspan="STATE.itemLength?STATE.itemLength:0" />
 
                         <tr>
                             <!--{{STATE.listData.items?STATE.listData.items.length:''}}:{{STATE.listData.items?STATE.patternNames.len:''}}-->
