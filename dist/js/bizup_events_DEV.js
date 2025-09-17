@@ -91,8 +91,8 @@
                 <th :colspan="colspan"></th>
                 <th v-for="(item,index) in pattern" :key="index" colspan="4" :style="{ backgroundColor: item.titleColor }">
                         {{item.name}} 
-                        <button @click="replaceAll(item)" class="bz_bt_def">一括置換</button>
-                        <button @click="save(item)" class="bz_bt_def">保存</button>
+                        <button @click="replaceAll(item)" class="bz_bt_def">顧客カルテに適用</button>
+                        <button @click="save(item)" class="bz_bt_def">この設定を保存</button>
                 </th>
             </tr>
         `,
@@ -531,12 +531,14 @@
                         patterns.push({ name: rec[key].value, jsonData: rec[STAFF_CHANGE_FIELDCD.jsonData.cd]?.value ?? '', id: rec[EXCEPT_ITEMS[0]].value, revision: rec[EXCEPT_ITEMS[1]].value });
                     });
                     tableHtml += '</tbody></table>';
+                    tableHtml += '<input type="hidden" id="clickName" value=\'\'></input>';
                     const result = await Swal.fire({
                         title: '取得データ一覧',
                         html: tableHtml,
                         showCancelButton: true,
                         confirmButtonText: '実行',
                         cancelButtonText: 'キャンセル',
+                        inputValidator: (value) => validator(value, 'パターン名'),
                         didOpen: () => {
                             setupRowClickHighlighting('patternTable');
                         },
@@ -707,36 +709,30 @@
 
             /**
              * 一括置換画面HTML作成
+             * @param {string} staffs 担当者optionタグ
+             * @param {string} staffsNew 変更後担当者optionタグ
+             * @param {string} name パターン名
              * @return {string} html
              */
-            const replaceAllHTML = (staffs, staffsNew) => {
+            const replaceAllHTML = (staffs, staffsNew, name) => {
                 const html = `
-                <div style="display: grid; grid-template-columns: 200px 1fr; gap: 32px;">
-                    <!-- 左側：ラジオボタン -->
-                    <div style="display: flex; flex-direction: column; align-items:flex-start; gap: 16px;">
-                        <label><input type="radio" name="staffRadio" value="current" checked> 現在の担当者</label>
-                        <label><input type="radio" name="staffRadio" value="pattern"> パターンAの担当者</label>
-                    </div>
-                    <!-- 右側：担当者選択 -->
-                    <div style="display: flex; align-items: center;">
-                        <select id="staffSelect">
-                            ${staffs}
-                            <!--<option v-for="option in getStaffList(selectedStaff)" :key="option.value" :value="option.value">{{ option.label }}</option>-->
-                        </select>
-                        <!--<select id="patternAStaffSelect"></select>-->
-                    </div>
-                </div>
+                <div style="text-align: left;">
+                    <p>変更する担当者区分を選択してください</p>
+                        <span style="display:inline-block; border:1px solid #888; padding:4px 12px; margin-left:37px; margin-bottom:4px;">
+                            <label style="margin:0;"><input type="checkbox" id="checkAll"> 全て選択</label>
+                        </span><br>
+                        <label style="margin-left:50px;"><input type="checkbox" id="staff" name="item" value="staff"> 担当者</label><br>
+                        <label style="margin-left:50px;"><input type="checkbox" id="subStaff" name="item" value="subStaff"> 副担当者</label><br><br>
+                    <p>変更する担当者を選択してください</p>
 
-                <div style="text-align:center; width:100%; margin:8px 0;">
-                    <span style="font-size:24px;">↓</span>
-                </div>
-
-                <!-- 変更後担当者選択 -->
-                <div style="display: grid; grid-template-columns: 200px 1fr; gap: 32px;">
-                    <span style="text-align: left;">変更後の担当者</span>
-                    <select id="afterStaffSelect">
-                        ${staffsNew}
-                    </select>
+                    <p style="margin-left:20px; margin-bottom:4px;">変更元担当者</p>
+                    <label style="margin-left:20px;"><input type="radio" name="staffRadio" value="current" checked> このパターンの担当者</label><br>
+                    <label style="margin-left:20px;"><input type="radio" name="staffRadio" value="pattern"> 現在の顧客カルテの担当者</label><br><br>
+                    <div style="margin-left:20px;" style="display: flex; align-items: center; gap: 8px;">
+                        <select id="staffSelect">${staffs}</select>
+                        <span>→</span>
+                        <select id="afterStaffSelect">${staffsNew}</select>
+                    </div>
                 </div>
             `;
                 return html;
@@ -758,10 +754,10 @@
                 optionStaffsNew = optionStaffsNew + `<option value="__EMPTY__">未設定</option>`;
 
                 // 一括置換画面HTML作成
-                const html = replaceAllHTML(optionStaffs, optionStaffsNew);
+                const html = replaceAllHTML(optionStaffs, optionStaffsNew, item.name);
 
                 const setupBulkReplaceDialogEvents = () => {
-                    // イベント設定
+                    // 担当者選択ラジオのイベント
                     const radioButtons = Swal.getPopup().querySelectorAll('input[name="staffRadio"]');
                     const select = Swal.getPopup().querySelector('#staffSelect');
                     radioButtons.forEach((radio) => {
@@ -778,39 +774,166 @@
                             select.innerHTML = options;
                         });
                     });
+
+                    // 「全て選択」チェックボックスのイベント
+                    const checkAllBox = Swal.getPopup().querySelector('#checkAll');
+                    const staffCheckbox = Swal.getPopup().querySelector('#staff');
+                    const subStaffCheckbox = Swal.getPopup().querySelector('#subStaff');
+                    if (checkAllBox && staffCheckbox && subStaffCheckbox) {
+                        // 「全て選択」チェックボックスのイベント
+                        checkAllBox.addEventListener('change', function () {
+                            const checked = checkAllBox.checked;
+                            staffCheckbox.checked = checked;
+                            subStaffCheckbox.checked = checked;
+                        });
+
+                        // 担当者/副担当者チェックボックスのイベント
+                        const handleStaffCheckChange = function () {
+                            if (!staffCheckbox.checked || !subStaffCheckbox.checked) {
+                                checkAllBox.checked = false;
+                            }
+                            if (staffCheckbox.checked && subStaffCheckbox.checked) {
+                                checkAllBox.checked = true;
+                            }
+                        };
+                        staffCheckbox.addEventListener('change', handleStaffCheckChange);
+                        subStaffCheckbox.addEventListener('change', handleStaffCheckChange);
+                    }
                 };
 
                 const result = await Swal.fire({
-                    title: '一括置換',
+                    title: '顧客カルテに適用',
                     html: html,
                     showCancelButton: true,
                     confirmButtonText: '実行',
                     cancelButtonText: 'キャンセル',
+                    width: '600px',
                     didOpen: setupBulkReplaceDialogEvents,
                     preConfirm: () => {
-                        const selectedRadio = Swal.getPopup().querySelector('input[name="staffRadio"]:checked');
+                        //const selectedRadio = Swal.getPopup().querySelector('input[name="staffRadio"]:checked');
                         const selectedStaff = Swal.getPopup().querySelector('#staffSelect').value;
-
-                        const afterStaff = Swal.getPopup().querySelector('#afterStaffSelect').value;
-                        if (!selectedStaff) {
-                            Swal.showValidationMessage('置換元の担当者を選択してください');
-                            return false;
-                        }
-                        if (!afterStaff) {
-                            Swal.showValidationMessage('変更後の担当者を選択してください');
-                            return false;
-                        }
-                        return { selectedRadio: selectedRadio ? selectedRadio.value : null, selectedStaff, afterStaff };
+                        const afterStaffSelect = Swal.getPopup().querySelector('#afterStaffSelect').value;
+                        const radio = Swal.getPopup().querySelector('input[name="staffRadio"]:checked').value;
+                        const staffCheck = Swal.getPopup().querySelector('#staff').checked;
+                        const subStaffCheck = Swal.getPopup().querySelector('#subStaff').checked;
+                        return {
+                            staff: selectedStaff,
+                            afterStaff: afterStaffSelect,
+                            radio: radio,
+                            staffCheck: staffCheck,
+                            subStaffCheck: subStaffCheck,
+                            index: item.index,
+                        };
                     },
-
                     //width: '80%',
                 });
 
                 //console.log('result:', result);
-                if (result === null) {
+                if (result.isDismissed) {
                     // キャンセルの場合
                     return;
                 }
+
+                // 一括置換処理
+                // どの項目を変更するのか設定
+                let staff = [];
+                let subStaff = [];
+                if (result.value.staffCheck) {
+                    // 担当者の場合
+                    // 現在の情報を取得
+                    if (result.value.radio === 'current') {
+                        staff[0] = PATTERN_NAME_ITEMS[1].cd; // 担当者コード
+                        staff[1] = PATTERN_NAME_ITEMS[2].cd; // 担当者名
+                        staff[2] = PATTERN_NAME_ITEMS[7].cd; // 担当者所属コード
+                        staff[3] = PATTERN_NAME_ITEMS[8].cd; // 担当者所属名
+                        staff[4] = SELECTTYPE_NAME_ITEMS[0].cd; // 担当者＋code
+                    }
+                    // パターンの情報を取得
+                    if (result.value.radio === 'pattern') {
+                        staff[0] = '新' + PATTERN_NAME_ITEMS[1].cd + result.value.index; // 担当者コード
+                        staff[1] = '新' + PATTERN_NAME_ITEMS[2].cd + result.value.index; // 担当者名
+                        staff[2] = '新' + PATTERN_NAME_ITEMS[7].cd + result.value.index; // 担当者所属コード
+                        staff[3] = '新' + PATTERN_NAME_ITEMS[8].cd + result.value.index; // 担当者所属名
+                        staff[4] = '新' + SELECTTYPE_NAME_ITEMS[0].cd + result.value.index; // 担当者＋code
+                    }
+                }
+                if (result.value.subStaffCheck) {
+                    // 副担当者の場合
+                    // 現在の情報を取得
+                    if (result.value.radio === 'current') {
+                        subStaff[0] = PATTERN_NAME_ITEMS[3].cd; // 副担当者コード
+                        subStaff[1] = PATTERN_NAME_ITEMS[4].cd; // 副担当者名
+                        subStaff[2] = PATTERN_NAME_ITEMS[9].cd; // 副担当者所属コード
+                        subStaff[3] = PATTERN_NAME_ITEMS[10].cd; // 副担当者所属名
+                        subStaff[4] = SELECTTYPE_NAME_ITEMS[1].cd; // 副担当者＋code
+                    }
+                    // パターンの情報を取得
+                    if (result.value.radio === 'pattern') {
+                        subStaff[0] = '新' + PATTERN_NAME_ITEMS[3].cd + result.value.index; // 副担当者コード
+                        subStaff[1] = '新' + PATTERN_NAME_ITEMS[4].cd + result.value.index; // 副担当者名
+                        subStaff[2] = '新' + PATTERN_NAME_ITEMS[9].cd + result.value.index; // 副担当者所属コード
+                        subStaff[3] = '新' + PATTERN_NAME_ITEMS[10].cd + result.value.index; // 副担当者所属名
+                        subStaff[4] = '新' + SELECTTYPE_NAME_ITEMS[1].cd + result.value.index; // 副担当者＋code
+                    }
+                }
+
+                /*if (result.value.staff === result.value.afterStaff) {
+                    Swal.fire({
+                        title: '一括置換',
+                        text: '変更前と変更後の担当者が同じです。',
+                        icon: 'warning',
+                        confirmButtonText: '閉じる',
+                    });
+                    return;
+                }*/
+
+                //console.log('変更する項目:', staff);
+
+                // STATE.listData.datasを一括置換
+                //const staffCodeKey = PATTERN_NAME_ITEMS[1].cd; // 担当者コード
+                //const newStaffCodeKey = '新' + PATTERN_NAME_ITEMS[1].cd + '1'; // 新担当者コード1
+                const selectedStaffCode = result.value.staff;
+                const afterStaffCode = result.value.afterStaff;
+
+                STATE.listData.datas.forEach((item) => {
+                    // 選択された担当者コードと同じ場合は置換
+                    // 担当者
+                    if (staff.length > 0 && item.datas[staff[0]] === selectedStaffCode) {
+                        // 以前データをバックアップする
+                        item.datas[staff[0] + '_OLD'] = item.datas[staff[0]];
+                        item.datas[staff[1] + '_OLD'] = item.datas[staff[1]];
+                        item.datas[staff[2] + '_OLD'] = item.datas[staff[2]];
+                        item.datas[staff[3] + '_OLD'] = item.datas[staff[3]];
+                        //item.datas[item[4] + '_OLD'] = item.datas[item[4]];
+                        // 変更後データをセット
+                        item.datas[item[0]] = afterStaffCode;
+                        STATE.selectStaffs
+                            .filter((s) => s[STAFFMASTER_FIELD.staffCode.cd] === afterStaffCode)
+                            .forEach((s) => {
+                                item.datas[staff[1]] = s[STAFFMASTER_FIELD.staff.name];
+                                item.datas[staff[2]] = s[STAFFMASTER_FIELD.organization.cd] && s[STAFFMASTER_FIELD.organization.cd].length > 0 ? s[STAFFMASTER_FIELD.organization.cd][0].code : '';
+                                item.datas[staff[3]] = s[STAFFMASTER_FIELD.organization.cd] && s[STAFFMASTER_FIELD.organization.cd].length > 0 ? s[STAFFMASTER_FIELD.organization.cd][0].name : '';
+                            });
+                    }
+                    // 副担当者
+                    if (subStaff.length > 0 && item.datas[subStaff[0]] === selectedStaffCode) {
+                        // 以前データをバックアップする
+                        item.datas[subStaff[0] + '_OLD'] = item.datas[subStaff[0]];
+                        item.datas[subStaff[1] + '_OLD'] = item.datas[subStaff[1]];
+                        item.datas[subStaff[2] + '_OLD'] = item.datas[subStaff[2]];
+                        item.datas[subStaff[3] + '_OLD'] = item.datas[subStaff[3]];
+                        //item.datas[item[4] + '_OLD'] = item.datas[item[4]];
+                        // 変更後データをセット
+                        item.datas[subStaff[0]] = afterStaffCode;
+                        STATE.selectStaffs
+                            .filter((s) => s[STAFFMASTER_FIELD.staffCode.cd] === afterStaffCode)
+                            .forEach((s) => {
+                                item.datas[subStaff[1]] = s[STAFFMASTER_FIELD.staffName.cd];
+                                item.datas[subStaff[2]] = s[STAFFMASTER_FIELD.organization.cd] && s[STAFFMASTER_FIELD.organization.cd].length > 0 ? s[STAFFMASTER_FIELD.organization.cd][0].code : '';
+                                item.datas[subStaff[3]] = s[STAFFMASTER_FIELD.organization.cd] && s[STAFFMASTER_FIELD.organization.cd].length > 0 ? s[STAFFMASTER_FIELD.organization.cd][0].name : '';
+                            });
+                    }
+                });
             };
 
             /**
@@ -853,6 +976,9 @@
 
                         STATE.listDataPattern.clickNo = relativeIndex;
                         STATE.listDataPattern.clickName = row.textContent;
+                        const hidden = Swal.getPopup().querySelectorAll('#clickName');
+                        hidden.value = STATE.listDataPattern.clickName;
+
                         //console.log('クリックされた行のインデックス:', STATE.listDataPattern.clickNo);
                     });
                 });
