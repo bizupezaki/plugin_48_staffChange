@@ -50,7 +50,7 @@
             return selRes;
         } catch (e) {
             //console.log('エラーが発生しました！：', e, ':cd:', e.error.code);
-            throw new Error('レコードの取得に失敗しました: ' + e.message);
+            throw e;
         }
     };
 
@@ -72,7 +72,7 @@
             upRes = await window.bizupUtil.constants.CLIENT.record.updateAllRecords(upParam);
             return upRes;
         } catch (e) {
-            throw new Error('レコードの更新に失敗しました: ' + e.message);
+            throw e;
         }
     };
 
@@ -92,7 +92,7 @@
             //console.log(addRes);
             return addRes;
         } catch (e) {
-            throw new Error('レコードの追加に失敗しました: ' + e.message);
+            throw e;
         }
     };
 
@@ -112,7 +112,7 @@
             //console.log(delRes);
             return delRes;
         } catch (e) {
-            throw new Error('レコードの削除に失敗しました: ' + e.message);
+            throw e;
         }
     };
 
