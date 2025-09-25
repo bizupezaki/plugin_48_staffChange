@@ -89,6 +89,7 @@
         revision: { readCd: '$revision', writeCd: 'revision', type: '__REVISION__', name: '' },
         staff: { cd: '担当者', type: 'SINGLE_LINE_TEXT', name: '担当者' },
         subStaff: { cd: '副担当者', type: 'SINGLE_LINE_TEXT', name: '副担当者' },
+        fiscalMonth: { cd: 'ドロップダウン_決算月', type: 'DROP_DOWN', name: '決算月' },
     };
 
     // 担当者変更のフィールド定義（appID:324）
@@ -189,6 +190,7 @@
                 selectedStaff: null,
                 filters: {}, // 絞り込み条件
                 itemLength: 0, // 表示項目数
+                listTotal: [], // 集計データ
             });
 
             // 項目名除外
@@ -197,6 +199,7 @@
             const ORG_ITEM = ['チーム', '副チーム'];
 
             // パターン名登録項目（コードと名称をひとつにした場合、別々にデータも保持するために持っている）
+            // データが汚すぎる→下のコード＋名称とくっつけて、綺麗に一つにしたい
             let PATTERN_NAME_ITEMS = [
                 { cd: '$id', label: '', type: '', visible: true },
                 { cd: '担当者コード', label: '', type: '', visible: true },
@@ -209,6 +212,7 @@
                 { cd: '担当者所属', label: '', type: '', visible: false },
                 { cd: '副担当者所属コード', label: '', type: '', visible: false },
                 { cd: '副担当者所属', label: '', type: '', visible: false },
+                { cd: '決算月', label: '', type: '', visible: false },
             ];
 
             // コードと名称をひとつにまとめる
@@ -219,6 +223,10 @@
                 { cd: '担当者所属コード名', type: '', label: '担当者所属', index: 2 },
                 { cd: '副担当者所属コード名', type: '', label: '副担当者所属', index: 4 },
             ];
+
+            // 集計用配列番号
+            const arrayNo = { current: 0, pattern1: 1, pattern2: 2, pattern3: 3 };
+
             const CONF = CONFDATA.CONFIG_DATA ? JSON.parse(CONFDATA.CONFIG_DATA) : '';
 
             const selectedStaffName = computed(() => {
@@ -862,8 +870,9 @@
                 }
 
                 // レコード更新
+                let ref = null;
                 try {
-                    const ref = await updateRecords(updateData, utils.constants.CUSTOMER_APP_ID);
+                    ref = await updateRecords(updateData, utils.constants.CUSTOMER_APP_ID);
                 } catch (error) {
                     console.error('顧客カルテの適用に失敗しました。', error.error);
                     //error.error.headers['x-cybozu-error']
@@ -1457,6 +1466,141 @@
             };
 
             /**
+             * 担当者集計
+             * @param {string} tableId テーブルID
+             * @param {string} highlightClass ハイライトカラー
+             */
+            const totalCustomersPerStaff = async () => {
+                // 担当者を取得
+                //let allStaffCodes = STATE.listData.datas.map((item) => item.datas[PATTERN_NAME_ITEMS[1].cd]);
+                //allStaffCodes = [...new Set(allStaffCodes)];
+
+                const testDatas = [
+                    {
+                        code: 'S001',
+                        name: 'A',
+                        datas: [
+                            { month: 1, count: 3 },
+                            { month: 2, count: 5 },
+                            { month: 3, count: 4 },
+                        ],
+                    },
+                    {
+                        code: 'S002',
+                        name: 'B',
+                        datas: [
+                            { month: 1, count: 3 },
+                            { month: 2, count: 5 },
+                            { month: 3, count: 4 },
+                        ],
+                    },
+                    {
+                        code: 'S003',
+                        name: 'C',
+                        datas: [
+                            { month: 1, count: 3 },
+                            { month: 2, count: 5 },
+                            { month: 3, count: 4 },
+                        ],
+                    },
+                ];
+                let totalData = [];
+
+                // STATE.listData.datasにある担当者コードごとで決算月ごとにデータの数を集計
+                STATE.listData.datas.forEach((item) => {
+                    const staffCode = item.datas[PATTERN_NAME_ITEMS[1].cd]; // 担当者コード
+                    const staffName = item.datas[PATTERN_NAME_ITEMS[2].cd]; // 担当者名
+                    const fiscalMonth = parseInt(item.datas[CUSTOMERCHART_FIELD.fiscalMonth.cd]) || 0; // 決算月
+
+                    // 既存の担当者データを検索
+                    let matchData = totalData.find((data) => data.code === staffCode);
+
+                    if (matchData) {
+                        // 既存担当者の場合、該当月のカウントを増やす
+                        let monthData = matchData.datas.find((d) => d.month === fiscalMonth);
+                        if (monthData) {
+                            monthData.count++;
+                        } else {
+                            matchData.datas.push({ month: fiscalMonth, count: 1 });
+                        }
+                    } else {
+                        // 新規担当者の場合、新しいエントリを作成
+                        totalData.push({
+                            code: staffCode,
+                            name: staffName,
+                            datas: [{ month: fiscalMonth, count: 1 }],
+                        });
+                    }
+                });
+                STATE.listTotal[arrayNo.current] = totalData;
+
+                // Swalに表示
+                // HTMLを作成
+                let tableHtml = `
+                    <table id="totalTable" style="width:100%; border-collapse: collapse;">
+                        <thead>
+                            <tr>
+                                <!--<th style="border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2;">担当者コード</th>-->
+                                <th style="border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2; text-align: center;">担当者名</th>
+                `;
+
+                for (let i = 1; i <= 12; i++) {
+                    tableHtml += `<th style="border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2; text-align: center;">${i}月</th>`;
+                }
+
+                tableHtml += `<th style="border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2;">合計</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+
+                STATE.listTotal[arrayNo.current].forEach((staff) => {
+                    if (!staff.code || String(staff.code).trim() === '') return; // 担当者コードが空欄は除外
+
+                    tableHtml += `
+                        <tr>
+                            <!--<td style="border: 1px solid #ddd; padding: 8px;">${staff.code}</td>-->
+                            <td style="border: 1px solid #ddd; padding: 8px; text-align: left;">${staff.name}</td>
+                    `;
+
+                    for (let i = 0; i < 12; i++) {
+                        const monthData = staff.datas.filter((data) => data.month === i + 1);
+                        if (monthData.length > 0) {
+                            tableHtml += `
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${monthData[0].count}</td>
+                            `;
+                        } else {
+                            tableHtml += `
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">0</td>
+                            `;
+                        }
+                    }
+                    // 顧客数合計
+                    const totalCount = staff.datas.reduce((sum, data) => sum + data.count, 0);
+                    tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${totalCount}</td>`;
+
+                    tableHtml += `</tr>`;
+                });
+                tableHtml += `
+                        </tbody>
+                    </table>
+                `;
+
+                await Swal.fire({
+                    title: '担当者別顧客数集計',
+                    html: tableHtml,
+                    //width: '600px',
+                    confirmButtonText: '閉じる',
+                    width: '80%',
+                    didOpen: () => {
+                        //setupRowClickHighlighting('totalTable');
+                    },
+                });
+                //console.log('totalData:', totalData);
+                //return;
+            };
+
+            /**
              * 一括置換担当者リスト取得
              * @param {string} tableId テーブルID
              * @param {string} highlightClass ハイライトカラー
@@ -1505,10 +1649,23 @@
                         //console.log('クリックされた行のインデックス:', STATE.listDataPattern.clickNo);
                     });
                 });
+
+                // ポップアップダイアログ画面の高さを調整
+                /*const popup = Swal.getPopup();
+
+                const item1 = document.querySelector('#swal2-title').getBoundingClientRect().height; // タイトル
+                //const item2 = Swal.getHtmlContainer().querySelectorAll('div')[1].getBoundingClientRect().height; // メッセージ
+                //const item3 = 26.86; // <br>
+                const item2 = popup.querySelector('#swal2-html-container').getBoundingClientRect().height; // 表
+                const item3 = document.querySelector('.swal2-actions').getBoundingClientRect().height; // ボタン
+                const items = item1 + item2 + item3;
+
+                utils.common.resizeDialog(popup.offsetHeight, items + 40, 'swal2-html-container');*/
             };
 
             /**
              * フィルタリングされた行を取得
+             * @return {array} フィルタリングされた行の配列
              */
             const filteredRows = computed(() => {
                 if (!STATE.listData?.datas || !Array.isArray(STATE.listData.datas)) return [];
@@ -1565,6 +1722,8 @@
 
             /**
              * 絞込作成
+             * @param {string} code フィールドコード
+             * @returns {array} 絞込用オプション配列
              */
             const getUniqueOptions = (code) => {
                 //const values = (STATE.listData?.datas ?? []).map((item) => item.datas[code]).filter((v) => v !== undefined && v !== null && String(v).trim() !== '');
@@ -1835,10 +1994,6 @@
              * @return {string} v-model用key
              */
             const setSelectVmodel = (key) => {
-                /*console.log('setNo index:', index, ' key:', key);
-                console.log('STATE.itemLength:', STATE.itemLength);
-                console.log('STATE.listData.items.length:', STATE.listData.items.length);
-                console.log('STATE.patternNames.len:', STATE.patternNames.len);*/
                 let rc = '';
                 rc = key + '_' + 'vmodel'; // v-model用
                 /*let name = key;
@@ -2107,6 +2262,13 @@
                 STATE.filters[SELECTTYPE_NAME_ITEMS[4].cd] = '';
                 //console.log('fields:', fields);
 
+                // 決算月追加
+                if (fields.indexOf(CUSTOMERCHART_FIELD.fiscalMonth.cd) === -1) {
+                    fields.push(CUSTOMERCHART_FIELD.fiscalMonth.cd);
+                } else {
+                    itemCount++;
+                }
+
                 // 項目の並び順を変更する
                 // 「顧客名」「担当者」「担当者所属」「副担当者」「副担当者所属」の順序にし、それ以外はこの順序の後に表示する
                 const orderKeys = SELECTTYPE_NAME_ITEMS.slice()
@@ -2220,6 +2382,9 @@
                         } else {
                             items[i].datas[SELECTTYPE_NAME_ITEMS[4].cd] = '';
                         }
+
+                        // 決算月
+                        items[i].datas[CUSTOMERCHART_FIELD.fiscalMonth.cd] = rec[CUSTOMERCHART_FIELD.fiscalMonth.cd]?.value ?? '';
 
                         i++;
                     });
@@ -2336,6 +2501,7 @@
                 //patternName,
                 setTitleBackColor,
                 setItemBackColor,
+                totalCustomersPerStaff,
             };
         },
         template: /* HTML */ `
@@ -2348,6 +2514,7 @@
             <div id="bz_header">
                 <button @click="addPattern" class="bz_bt_def">パターン追加</button>
                 <button @click="openPattern" class="bz_bt_def">パターン開く</button>
+                <button @click="totalCustomersPerStaff" class="bz_bt_def">担当者集計</button>
             </div>
             <div id="bz_events_main_container">
                 <table class="bz_table_def">
