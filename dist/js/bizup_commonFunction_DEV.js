@@ -57,6 +57,65 @@
     };
 
     /**
+     * ダイアログのサイズを調整する
+     * @param {Number} popupheight ポップアップの高さ
+     * @param {Number} itemsHeight ポップアップ内の固定要素の高さ（タイトル、メッセージ、ボタン等）
+     * @param {String} id スクロールエリアのID
+     */
+    const resizeDialog = (popupheight, itemsHeight, id) => {
+        //const popup = Swal.getPopup();
+        //resizeDialog(popup.offsetHeight);
+        const popup = Swal.getPopup();
+
+        if (popup) {
+            // ポップアップ画面が表示されている場合
+
+            // 画面サイズを取得
+            const windowHeight = window.innerHeight;
+
+            // 項目の高さを取得（外から取得）
+            /*const item1 = document.querySelector('.swal2-title').getBoundingClientRect().height; // タイトル
+            const item2 = Swal.getHtmlContainer().querySelectorAll('div')[1].getBoundingClientRect().height; // メッセージ
+            const item3 = 26.86; // <br>
+            const item4 = document.querySelector('.swal2-actions').getBoundingClientRect().height; // ボタン
+            const items = item1 + item2 + item3 + item4;*/
+
+            if (popupheight > windowHeight) {
+                // windowよりもポップアップ画面が大きい場合はポップアップの高さを調整
+                const newWindowHeight = Math.floor(windowHeight * 0.95);
+                popup.style.height = newWindowHeight + 'px';
+
+                const height = popup.offsetHeight - itemsHeight;
+                const element = document.getElementById(id);
+                element.style.height = height + 'px';
+                //console.log('change: ', 'popup.offsetHeight:', newWindowHeight, 'bz_swal_container:', height);
+            } else if (popupheight < windowHeight) {
+                // Windowよりもポップアップ画面が小さい場合はポップアップの高さを調整
+
+                // スクロールの有無を確認
+                //const scrollArea = Swal.getHtmlContainer().querySelectorAll('div')[2];
+                const scrollArea = popup.querySelectorAll('#' + id)[0];
+                const hasScroll = scrollArea.scrollHeight > scrollArea.clientHeight;
+                console.log('hasScroll:', hasScroll);
+
+                if (hasScroll) {
+                    // スクロールがある場合はポップアップの高さを調整
+                    const newPopupHeight = Math.floor(windowHeight * 0.95);
+                    popup.style.height = newPopupHeight + 'px';
+
+                    const height = popup.getBoundingClientRect().height - itemsHeight;
+                    const element = document.getElementById(id);
+                    element.style.height = height + 'px';
+                } else {
+                    // スクロールがない場合はポップアップの高さを自動調整
+                    const element = document.getElementById(id);
+                    element.style.height = 'auto'; // 高さを自動調整
+                }
+            }
+        }
+    };
+
+    /**
      * アプリ内のフィールド定義を取得し、文字列に変換する
      * @param {String} appId(アプリID)
      * @return {String} 定数定義の文字列
@@ -210,5 +269,6 @@
         safeParseNumber: safeParseNumber,
         formatNumberWithCommas: formatNumberWithCommas,
         deepUnproxy: deepUnproxy,
+        resizeDialog: resizeDialog,
     };
 })();
