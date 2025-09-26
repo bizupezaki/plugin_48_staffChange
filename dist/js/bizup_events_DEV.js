@@ -190,7 +190,7 @@
                 selectedStaff: null,
                 filters: {}, // 絞り込み条件
                 itemLength: 0, // 表示項目数
-                listTotal: [], // 集計データ
+                listTotal: {}, // 集計データ
             });
 
             // 項目名除外
@@ -224,10 +224,64 @@
                 { cd: '副担当者所属コード名', type: '', label: '副担当者所属', index: 4 },
             ];
 
-            // 集計用配列番号
+            // 配列番号
             const arrayNo = { current: 0, pattern1: 1, pattern2: 2, pattern3: 3 };
 
             const CONF = CONFDATA.CONFIG_DATA ? JSON.parse(CONFDATA.CONFIG_DATA) : '';
+
+            /*const totalStaff = computed(() => {
+                //get() {
+                console.log('get:');
+
+                return 'test';
+                //},
+            });*/
+
+            // 担当者、決算月ごとの集計
+            const totalStaff = computed(() => {
+                let totalData = [];
+                // 空の配列を用意
+                let patternList = Array.from({ length: STATE.patternNames.len }, () => []);
+                STATE.listData.datas.forEach((item) => {
+                    const fiscalMonth = parseInt(item.datas[CUSTOMERCHART_FIELD.fiscalMonth.cd]) || 0; // 決算月
+
+                    for (let i = 0; i < STATE.patternNames.len; i++) {
+                        const pattern = STATE.patternNames.names[i];
+                        // 各パターンごとの集計処理
+
+                        // 項目名取得
+                        const itemCode = '新' + PATTERN_NAME_ITEMS[1].cd + pattern.index; // 担当者コード
+                        const itemName = '新' + PATTERN_NAME_ITEMS[2].cd + pattern.index; // 担当者名
+
+                        const staffCode = item.datas[itemCode]; // 担当者コード
+                        const staffName = item.datas[itemName]; // 担当者名
+
+                        // 既存の担当者データを検索
+                        let matchData = patternList[i].find((data) => data.code === staffCode);
+
+                        if (matchData) {
+                            // 既存担当者の場合、該当月のカウントを増やす
+                            let monthData = matchData.datas.find((d) => d.month === fiscalMonth);
+                            if (monthData) {
+                                monthData.count++;
+                            } else {
+                                matchData.datas.push({ month: fiscalMonth, count: 1 });
+                            }
+                        } else {
+                            // 新規担当者の場合、新しいエントリを作成
+                            patternList[i].push({
+                                code: staffCode,
+                                name: staffName,
+                                datas: [{ month: fiscalMonth, count: 1 }],
+                            });
+                        }
+                    }
+                });
+                totalData = patternList;
+                console.log('patternList:', patternList);
+                console.log('totalData:', totalData);
+                return totalData;
+            });
 
             const selectedStaffName = computed(() => {
                 if (!STATE.testSelectedStaff) return '';
@@ -603,15 +657,15 @@
                     const key = STAFF_CHANGE_FIELDCD.patternName.cd;
                     const label = STAFF_CHANGE_FIELDCD.patternName.name;
                     let patterns = [];
-                    let tableHtml = '<table id="patternTable" class="bz_table_def">';
+                    let tableHtml = '<table id="patternTable" style="width:100%; border-collapse: collapse;">';
                     tableHtml += '<thead><tr>';
-                    tableHtml += `<th>${label}</th>`;
+                    tableHtml += `<th style="border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2; text-align: center;">${label}</th>`;
                     tableHtml += '</tr></thead>';
                     tableHtml += '<tbody>';
                     records.forEach((rec) => {
                         tableHtml += '<tr>';
                         let val = rec[key]?.value ?? '';
-                        tableHtml += `<td>${val}</td>`;
+                        tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: left;">${val}</td>`;
                         tableHtml += '</tr>';
 
                         // JSONデータを取得
@@ -636,9 +690,9 @@
                                 return false;
                             }
                         },
-                        //width: '80%',
+                        //width: '20%',
                     });
-                    if (result.dismiss === Swal.DismissReason.cancel) {
+                    if (result.dismiss === Swal.DismissReason.cancel || result.isConfirmed === false) {
                         // キャンセルの場合
                         return;
                     }
@@ -959,6 +1013,37 @@
                 }, STATE.listData.datas);
 
                 STATE.listData.datas = updatedArrays;
+
+                // 担当者ごとに集計
+                let totalData = [];
+                // STATE.listData.datasにある担当者コードごとで決算月ごとにデータの数を集計
+                STATE.listData.datas.forEach((item) => {
+                    const staffCode = item.datas[PATTERN_NAME_ITEMS[1].cd]; // 担当者コード
+                    const staffName = item.datas[PATTERN_NAME_ITEMS[2].cd]; // 担当者名
+                    const fiscalMonth = parseInt(item.datas[CUSTOMERCHART_FIELD.fiscalMonth.cd]) || 0; // 決算月
+
+                    // 既存の担当者データを検索
+                    let matchData = totalData.find((data) => data.code === staffCode);
+
+                    if (matchData) {
+                        // 既存担当者の場合、該当月のカウントを増やす
+                        let monthData = matchData.datas.find((d) => d.month === fiscalMonth);
+                        if (monthData) {
+                            monthData.count++;
+                        } else {
+                            matchData.datas.push({ month: fiscalMonth, count: 1 });
+                        }
+                    } else {
+                        // 新規担当者の場合、新しいエントリを作成
+                        totalData.push({
+                            code: staffCode,
+                            name: staffName,
+                            datas: [{ month: fiscalMonth, count: 1 }],
+                        });
+                    }
+                });
+                STATE.listTotal = totalData;
+
                 /*ref.records.forEach((r) => {
                     STATE.listData.datas = STATE.listData.datas.map((data) => {
                         if (data.datas[EXCEPT_ITEMS[0]] === r.id) {
@@ -1504,7 +1589,7 @@
                         ],
                     },
                 ];
-                let totalData = [];
+                /*let totalData = [];
 
                 // STATE.listData.datasにある担当者コードごとで決算月ごとにデータの数を集計
                 STATE.listData.datas.forEach((item) => {
@@ -1532,7 +1617,7 @@
                         });
                     }
                 });
-                STATE.listTotal[arrayNo.current] = totalData;
+                STATE.listTotal[arrayNo.current] = totalData;*/
 
                 // Swalに表示
                 // HTMLを作成
@@ -1540,21 +1625,40 @@
                     <table id="totalTable" style="width:100%; border-collapse: collapse;">
                         <thead>
                             <tr>
+                                <td colspan="14"></td>
+                `;
+                // パターン名
+                for (let i = 0; i < STATE.patternNames.len; i++) {
+                    tableHtml += `<th colspan="2"style="border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2;">${STATE.patternNames.names[i].name}</th>`;
+                }
+
+                tableHtml += `
+                            </tr>
+                            <tr>
                                 <!--<th style="border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2;">担当者コード</th>-->
                                 <th style="border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2; text-align: center;">担当者名</th>
                 `;
 
+                // 月
                 for (let i = 1; i <= 12; i++) {
                     tableHtml += `<th style="border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2; text-align: center;">${i}月</th>`;
                 }
 
-                tableHtml += `<th style="border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2;">合計</th>
+                tableHtml += `<th style="border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2;">合計</th>`;
+
+                for (let i = 0; i < STATE.patternNames.len; i++) {
+                    tableHtml += `<th style="border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2;">合計</th>`;
+                    tableHtml += `<th style="border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2;">増減</th>`;
+                }
+                tableHtml += `
                             </tr>
                         </thead>
                         <tbody>
                 `;
 
-                STATE.listTotal[arrayNo.current].forEach((staff) => {
+                // 担当者コードをためる
+                let codes = [];
+                STATE.listTotal.forEach((staff) => {
                     if (!staff.code || String(staff.code).trim() === '') return; // 担当者コードが空欄は除外
 
                     tableHtml += `
@@ -1579,13 +1683,60 @@
                     const totalCount = staff.datas.reduce((sum, data) => sum + data.count, 0);
                     tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${totalCount}</td>`;
 
-                    tableHtml += `</tr>`;
+                    // パターンごと
+                    let totalCountPat = 0;
+                    for (let i = 0; i < STATE.patternNames.len; i++) {
+                        const staffData = totalStaff.value[i].filter((s) => s.code === staff.code);
+                        if (!staffData || staffData.length <= 0) {
+                            tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">0</td>`;
+                            tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">-${totalCount}</td>`;
+                            continue;
+                        }
+                        // 合計
+                        totalCountPat = staffData[0].datas.reduce((sum, data) => sum + data.count, 0);
+                        tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${totalCountPat}</td>`;
+
+                        // 増減
+                        const diff = totalCountPat - totalCount;
+                        tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${diff}</td>`;
+
+                        // 担当者コードをためる
+                        codes.push(staff.code);
+                    }
                 });
+                tableHtml += `</tr>`;
+
+                for (let i = 0; i < STATE.patternNames.len; i++) {
+                    const patternOnlyStaffs = totalStaff.value[i].filter((s) => !codes.includes(s.code));
+                    patternOnlyStaffs.forEach((staff) => {
+                        if (staff.code && String(staff.code).trim() !== '') {
+                            // 担当者コードが空欄は除外
+                            tableHtml += `<tr>`;
+                            tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: left;">${staff.name}</td>`;
+                            for (let m = 0; m < 13; m++) {
+                                tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">0</td>`;
+                            }
+
+                            // 合計
+                            totalCountPat = staff.datas.reduce((sum, data) => sum + data.count, 0);
+                            tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${totalCountPat}</td>`;
+
+                            // 増減（全員新規のため、増減は全てプラス）
+                            tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${totalCountPat}</td>`;
+                            tableHtml += `</tr>`;
+                        }
+                    });
+                }
                 tableHtml += `
+                            </tr>
                         </tbody>
                     </table>
                 `;
+                tableHtml += `
+                    <p>test:${totalStaff.value[0][0].name}</p>
+                `;
 
+                console.log(totalStaff);
                 await Swal.fire({
                     title: '担当者別顧客数集計',
                     html: tableHtml,
@@ -1600,6 +1751,27 @@
                 //return;
             };
 
+            /**
+             * windowの倍率変更時にポップアップの高さを調整する
+             */
+            window.addEventListener('resize', function () {
+                // 画面の推定倍率を取得
+                const windowHeight = window.innerHeight;
+                const zoomLevel = window.outerHeight / windowHeight;
+
+                const popup = Swal.getPopup();
+                if (popup) {
+                    // ポップアップ画面が表示されている場合、高さを再計算
+                    const popupheight = popup.getBoundingClientRect().height * zoomLevel;
+
+                    const item1 = document.querySelector('#swal2-title').getBoundingClientRect().height; // タイトル
+                    // const item2 = popup.querySelector('#swal2-html-container').getBoundingClientRect().height; // 表
+                    const item2 = document.querySelector('.swal2-actions').getBoundingClientRect().height; // ボタン
+                    const items = item1 + item2;
+
+                    bizupUtil.common.resizeDialog(popupheight, items + 50, 'swal2-html-container');
+                }
+            });
             /**
              * 一括置換担当者リスト取得
              * @param {string} tableId テーブルID
@@ -1651,16 +1823,16 @@
                 });
 
                 // ポップアップダイアログ画面の高さを調整
-                /*const popup = Swal.getPopup();
+                const popup = Swal.getPopup();
 
                 const item1 = document.querySelector('#swal2-title').getBoundingClientRect().height; // タイトル
                 //const item2 = Swal.getHtmlContainer().querySelectorAll('div')[1].getBoundingClientRect().height; // メッセージ
                 //const item3 = 26.86; // <br>
-                const item2 = popup.querySelector('#swal2-html-container').getBoundingClientRect().height; // 表
-                const item3 = document.querySelector('.swal2-actions').getBoundingClientRect().height; // ボタン
-                const items = item1 + item2 + item3;
+                //const item2 = popup.querySelector('#swal2-html-container').getBoundingClientRect().height; // 表
+                const item2 = document.querySelector('.swal2-actions').getBoundingClientRect().height; // ボタン
+                const items = item1 + item2;
 
-                utils.common.resizeDialog(popup.offsetHeight, items + 40, 'swal2-html-container');*/
+                utils.common.resizeDialog(popup.offsetHeight, items + 50, 'swal2-html-container');
             };
 
             /**
@@ -2147,7 +2319,7 @@
                 return { cd: cd, nm: nm };
             };
 
-            Vue.onMounted(async () => {
+            onMounted(async () => {
                 // 初期表示
 
                 // 取得フィールド作成
@@ -2289,6 +2461,7 @@
                     }
                     //const items = Object.keys(records[0]).filter((item) => !EXCEPT_ITEMS.includes(item));
                     let items = [];
+                    let totalData = [];
                     let i = 0;
                     records.forEach((rec) => {
                         items.push({ datas: {} });
@@ -2386,10 +2559,36 @@
                         // 決算月
                         items[i].datas[CUSTOMERCHART_FIELD.fiscalMonth.cd] = rec[CUSTOMERCHART_FIELD.fiscalMonth.cd]?.value ?? '';
 
+                        // 担当者集計
+                        const staffCode = items[i].datas[PATTERN_NAME_ITEMS[1].cd]; // 担当者コード
+                        const staffName = items[i].datas[PATTERN_NAME_ITEMS[2].cd]; // 担当者名
+                        const fiscalMonth = parseInt(items[i].datas[CUSTOMERCHART_FIELD.fiscalMonth.cd]) || 0; // 決算月
+
+                        // 既存の担当者データを検索
+                        let matchData = totalData.find((data) => data.code === staffCode);
+
+                        if (matchData) {
+                            // 既存担当者の場合、該当月のカウントを増やす
+                            let monthData = matchData.datas.find((d) => d.month === fiscalMonth);
+                            if (monthData) {
+                                monthData.count++;
+                            } else {
+                                matchData.datas.push({ month: fiscalMonth, count: 1 });
+                            }
+                        } else {
+                            // 新規担当者の場合、新しいエントリを作成
+                            totalData.push({
+                                code: staffCode,
+                                name: staffName,
+                                datas: [{ month: fiscalMonth, count: 1 }],
+                            });
+                        }
+
                         i++;
                     });
                     STATE.listData.datas = items;
                     STATE.itemLength = STATE.listData.items.length - itemCount - 2;
+                    STATE.listTotal = totalData;
                     // 各配列の末尾に担当者・副担当者データを追加
                     /*STATE.listData.datas.forEach((item) => {
                         if (item.datas['担当者'] !== undefined) {
@@ -2474,6 +2673,7 @@
                     console.log('担当者取得失敗！:onMounted:', e.error);
                 }
                 console.log('STATE:', STATE);
+                //totalStaff();
             });
 
             return {
@@ -2502,6 +2702,7 @@
                 setTitleBackColor,
                 setItemBackColor,
                 totalCustomersPerStaff,
+                totalStaff,
             };
         },
         template: /* HTML */ `
@@ -2571,6 +2772,7 @@
             </div>
 
             <div>
+                <!--totalStaff: {{ totalStaff }}<br />-->
                 CONF：
                 <pre>{{ CONF }}</pre>
             </div>
