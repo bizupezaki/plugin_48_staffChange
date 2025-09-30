@@ -51,6 +51,7 @@
                         use: true,
                     },
                 ],
+                radOrg: 0, // 0:最初の所属組織で集計、-1:最後の所属組織で集計
             });
 
             const STATE = reactive({
@@ -270,6 +271,11 @@
                         </tr>
                     </tbody>
                 </table>
+
+                <h2>集計方法</h2>
+                <label for="radFirstOrg" class="radio-option"><input type="radio" @change="" id="radFirstOrg" name="radFirstOrg" v-model="DATA.radOrg" :value="0" checked />最初の所属組織で集計</label>
+                <label for="radLastOrg"><input type="radio" @change="" id="radLastOrg" name="radLastOrg" v-model="DATA.radOrg" :value="-1" />最後の所属組織で集計</label>
+
                 <h2>テーブルフィールド選択</h2>
                 <div class="bz_flex_container bz_flex_gap_30" id="bz_config_table_container">
                     <div>
