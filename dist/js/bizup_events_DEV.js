@@ -144,8 +144,8 @@
                 listDataPattern: { clickNo: null, datas: [], clickName: '' },
                 patternNames: { len: 0, index: 1, maxlength: MAX_PATTERN, names: [] },
                 selectStaffs: [], // 担当者マスタの全データ
-                testSelectedStaff: null,
-                selectedStaff: null,
+                testSelectedStaff: null, // v-select用
+                //selectedStaff: null,    // 使用していないのか？
                 filters: {}, // 絞り込み条件
                 itemLength: 0, // 表示項目数
                 listTotal: {}, // 集計データ
@@ -183,7 +183,10 @@
             ];
 
             // 配列番号
-            const arrayNo = { current: 0, pattern1: 1, pattern2: 2, pattern3: 3 };
+            //const arrayNo = { current: 0, pattern1: 1, pattern2: 2, pattern3: 3 };
+
+            // selectの空の値（未設定用）
+            const EMPTY_VALUE = '__EMPTY__';
 
             const CONF = CONFDATA.CONFIG_DATA ? JSON.parse(CONFDATA.CONFIG_DATA) : '';
 
@@ -205,22 +208,25 @@
                         // 各パターンごとの集計処理
 
                         // 項目名取得
-                        const itemCode = '新' + PATTERN_NAME_ITEMS[1].cd + pattern.index; // 担当者コード
-                        const itemName = '新' + PATTERN_NAME_ITEMS[2].cd + pattern.index; // 担当者名
-
+                        let itemCode = '新' + PATTERN_NAME_ITEMS[1].cd + pattern.index; // 担当者コード
+                        let itemName = '新' + PATTERN_NAME_ITEMS[2].cd + pattern.index; // 担当者名
                         const staffCode = item.datas[itemCode]; // 担当者コード
                         const staffName = item.datas[itemName]; // 担当者名
 
-                        // 既存の担当者データを検索
-                        let matchData = patStaffList[i].find((data) => data.code === staffCode);
+                        itemCode = '新' + PATTERN_NAME_ITEMS[7].cd + pattern.index; // 担当者コード
+                        itemName = '新' + PATTERN_NAME_ITEMS[8].cd + pattern.index; // 担当者名
+                        const orgCode = item.datas[itemCode]; // 担当者コード
+                        const orgName = item.datas[itemName]; // 担当者名
 
-                        if (matchData) {
+                        // 担当者データを検索
+                        let matchDataStaff = patStaffList[i].find((data) => data.code === staffCode);
+                        if (matchDataStaff) {
                             // 既存担当者の場合、該当月のカウントを増やす
-                            let monthData = matchData.datas.find((d) => d.month === fiscalMonth);
+                            let monthData = matchDataStaff.datas.find((d) => d.month === fiscalMonth);
                             if (monthData) {
                                 monthData.count++;
                             } else {
-                                matchData.datas.push({ month: fiscalMonth, count: 1 });
+                                matchDataStaff.datas.push({ month: fiscalMonth, count: 1 });
                             }
                         } else {
                             // 新規担当者の場合、新しいエントリを作成
@@ -230,9 +236,28 @@
                                 datas: [{ month: fiscalMonth, count: 1 }],
                             });
                         }
+
+                        // 所属データを検索
+                        let matchDataOrg = patOrgList[i].find((data) => data.code === orgCode);
+                        if (matchDataOrg) {
+                            // 既存担当者の場合、該当月のカウントを増やす
+                            let monthData = matchDataOrg.datas.find((d) => d.month === fiscalMonth);
+                            if (monthData) {
+                                monthData.count++;
+                            } else {
+                                matchDataOrg.datas.push({ month: fiscalMonth, count: 1 });
+                            }
+                        } else {
+                            // 新規担当者の場合、新しいエントリを作成
+                            patOrgList[i].push({
+                                code: orgCode,
+                                name: orgName,
+                                datas: [{ month: fiscalMonth, count: 1 }],
+                            });
+                        }
                     }
                 });
-                totalData = { staff: patStaffList, org: [] };
+                totalData = { staff: patStaffList, org: patOrgList };
                 //console.log('patStaffList:', patStaffList);
                 //console.log('totalData:', totalData);
                 return totalData;
@@ -712,6 +737,7 @@
 
             /**
              * 顧客カルテに適用
+             * @param {object} item パターンデータ
              */
             const applyCustomerChartPattern = async (item) => {
                 // データのバックアップ（レコード登録失敗時に元に戻すため）
@@ -798,6 +824,7 @@
                 }
 
                 // レコード更新
+                // 顧客カルテ更新
                 let ref = null;
                 try {
                     ref = await updateRecords(updateData, utils.constants.CUSTOMER_APP_ID);
@@ -889,34 +916,56 @@
                 STATE.listData.datas = updatedArrays;
 
                 // 担当者ごとに集計
-                let totalData = [];
+                let totalStaff = [];
+                let totalOrg = [];
                 // STATE.listData.datasにある担当者コードごとで決算月ごとにデータの数を集計
                 STATE.listData.datas.forEach((item) => {
                     const staffCode = item.datas[PATTERN_NAME_ITEMS[1].cd]; // 担当者コード
                     const staffName = item.datas[PATTERN_NAME_ITEMS[2].cd]; // 担当者名
+                    const orgCode = item.datas[PATTERN_NAME_ITEMS[7].cd]; // 担当者所属コード
+                    const orgName = item.datas[PATTERN_NAME_ITEMS[8].cd]; // 担当者所属名
                     const fiscalMonth = parseInt(item.datas[CUSTOMERCHART_FIELD.fiscalMonth.cd]) || 0; // 決算月
 
                     // 既存の担当者データを検索
-                    let matchData = totalData.find((data) => data.code === staffCode);
+                    let matchStaff = totalStaff.find((data) => data.code === staffCode);
+                    let matchOrg = totalOrg.find((data) => data.code === orgCode);
 
-                    if (matchData) {
+                    if (matchStaff) {
                         // 既存担当者の場合、該当月のカウントを増やす
-                        let monthData = matchData.datas.find((d) => d.month === fiscalMonth);
+                        let monthData = matchStaff.datas.find((d) => d.month === fiscalMonth);
                         if (monthData) {
                             monthData.count++;
                         } else {
-                            matchData.datas.push({ month: fiscalMonth, count: 1 });
+                            matchStaff.datas.push({ month: fiscalMonth, count: 1 });
                         }
                     } else {
                         // 新規担当者の場合、新しいエントリを作成
-                        totalData.push({
+                        totalStaff.push({
                             code: staffCode,
                             name: staffName,
                             datas: [{ month: fiscalMonth, count: 1 }],
                         });
                     }
+
+                    // 所属ごとに集計
+                    if (matchOrg) {
+                        // 既存所属の場合、該当月のカウントを増やす
+                        let monthData = matchOrg.datas.find((d) => d.month === fiscalMonth);
+                        if (monthData) {
+                            monthData.count++;
+                        } else {
+                            matchOrg.datas.push({ month: fiscalMonth, count: 1 });
+                        }
+                    } else {
+                        // 新規所属の場合、新しいエントリを作成
+                        totalOrg.push({
+                            code: orgCode,
+                            name: orgName,
+                            datas: [{ month: fiscalMonth, count: 1 }],
+                        });
+                    }
                 });
-                STATE.listTotal = totalData;
+                STATE.listTotal = { staff: totalStaff, org: totalOrg };
             };
 
             /**
@@ -1026,12 +1075,10 @@
 
             /**
              * 一括置換画面HTML作成
-             * @param {string} staffs 担当者optionタグ
              * @param {string} staffsNew 変更後担当者optionタグ
-             * @param {string} name パターン名
              * @return {string} html
              */
-            const replaceAllHTML = (staffs, staffsNew, name) => {
+            const replaceAllHTML = (staffsNew) => {
                 const html = `
                 <div style="text-align: left;">
                     <p>変更する担当者区分を選択してください</p>
@@ -1057,6 +1104,10 @@
 
             /**
              * selectの設定
+             * @param {array} staffsCode 担当者option配列
+             * @param {array} staffsCodePattern パターン担当者option配列
+             * @param {array} substaffsCode 副担当者option配列
+             * @return {string} options optionタグ
              */
             const generateBulkReplaceSelectOptions = (staffsCode, staffsCodePattern, substaffsCode) => {
                 const radioButtons = Swal.getPopup().querySelectorAll('input[name="staffRadio"]:checked')[0];
@@ -1080,7 +1131,7 @@
                     });
                     options = uniqueCombined.map((opt) => `<option value="${opt.value}" key="${opt.value}">${opt.label}</option>`).join('');
                 }
-                options = options + `<option value="__EMPTY__">未設定</option>`;
+                options = options + `<option value=${EMPTY_VALUE}>未設定</option>`;
                 return options;
             };
 
@@ -1113,16 +1164,16 @@
 
                 // 検索データ作成
                 const items = initializeBulkReplaceFields({ staffCheck: staffCheck, subStaffCheck: subStaffCheck, radio: radio, index: index });
-                selectedStaff = selectedStaff === '__EMPTY__' ? '' : selectedStaff;
+                selectedStaff = selectedStaff === EMPTY_VALUE ? '' : selectedStaff;
 
                 // 置換元のデータがない場合、エラー
-                let msgFlag = false;
+                let msgFlag = [false, false]; // [担当者,副担当者]
                 let msg = '';
                 if (staffCheck) {
                     const datas = STATE.listData.datas.map((p) => p.datas[items.searchStaff[0]]);
                     const rc = datas.includes(selectedStaff);
                     if (!rc) {
-                        msgFlag = true;
+                        msgFlag[0] = true;
                         msg = '変更前担当者';
                         //Swal.showValidationMessage('変更前担当者のデータがありません。');
                         //return false;
@@ -1132,13 +1183,21 @@
                     const datas = STATE.listData.datas.map((p) => p.datas[items.searchStaff[1]]);
                     const rc = datas.includes(selectedStaff);
                     if (!rc) {
-                        msgFlag = true;
+                        msgFlag[1] = true;
                         msg = msg === '' ? '変更前副担当者' : msg + '、変更前副担当者';
                     }
                 }
-                if (msgFlag) {
-                    Swal.showValidationMessage(msg + 'のデータがありません。');
-                    return false;
+
+                if (staffCheck && subStaffCheck) {
+                    if (msgFlag[0] && msgFlag[1]) {
+                        Swal.showValidationMessage(msg + 'のデータがありません。');
+                        return false;
+                    }
+                } else {
+                    if (msgFlag[0] || msgFlag[1]) {
+                        Swal.showValidationMessage(msg + 'のデータがありません。');
+                        return false;
+                    }
                 }
 
                 return {
@@ -1238,12 +1297,12 @@
                 const substaffsCode = getUniqueOptions(SELECTTYPE_NAME_ITEMS[1].cd); // 副担当者
 
                 let optionStaffs = staffsCode.map((opt) => `<option value="${opt.value}" key="${opt.value}">${opt.label}</option>`).join('');
-                optionStaffs = optionStaffs + `<option value="__EMPTY__">未設定</option>`;
+                optionStaffs = optionStaffs + `<option value="${EMPTY_VALUE}">未設定</option>`;
                 let optionStaffsPattern = staffsCodePattern.map((opt) => `<option value="${opt.value}" key="${opt.value}">${opt.label}</option>`).join('');
-                optionStaffsPattern = optionStaffsPattern + `<option value="__EMPTY__">未設定</option>`;
+                optionStaffsPattern = optionStaffsPattern + `<option value="${EMPTY_VALUE}">未設定</option>`;
 
                 // 担当者一括置換画面HTML作成
-                const html = replaceAllHTML(optionStaffs, optionStaffsPattern, item.name);
+                const html = replaceAllHTML(optionStaffsPattern);
 
                 /**
                  * 担当者一括置換ダイアログのイベント設定
@@ -1364,17 +1423,23 @@
 
             /**
              * 担当者 所属集計
+             * @param {number} flg 0:担当者 1:所属
              */
             const totalCustomersPer = async (flg) => {
                 // 担当者　所属のデータを作成
                 let listTotal = null;
-                let total = totalStaff.value;
+                let total = null;
+                let title = '';
                 if (flg === 0) {
                     // 担当者集計
                     listTotal = STATE.listTotal.staff;
+                    total = totalStaff.value.staff;
+                    title = '担当者別集計';
                 } else if (flg === 1) {
                     // 所属集計
                     listTotal = STATE.listTotal.org;
+                    total = totalStaff.value.org;
+                    title = '所属別集計';
                 }
 
                 // Swalに表示
@@ -1414,9 +1479,16 @@
                         <tbody>
                 `;
 
+                // listTotalを担当者コードで並び替える
+                listTotal.sort((a, b) => {
+                    if (a.code < b.code) return -1;
+                    if (a.code > b.code) return 1;
+                    return 0;
+                });
+
                 let codes = []; // コードをためる
                 listTotal.forEach((item) => {
-                    if (!item.code || String(item.code).trim() === '') return; // 担当者コードが空欄は除外
+                    if (!item.code || String(item.code).trim() === '') return; // コードが空欄は除外
 
                     tableHtml += `
                         <tr>
@@ -1437,7 +1509,8 @@
                         `;
                     }
                     // 顧客数合計
-                    const totalCount = item.datas.reduce((sum, data) => sum + data.count, 0);
+                    //const totalCount = item.datas.reduce((sum, data) => sum + data.count, 0);
+                    const totalCount = item.datas.filter((data) => data.month !== -1).reduce((sum, data) => sum + data.count, 0);
                     tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${totalCount}</td>`;
 
                     // パターンごと
@@ -1450,7 +1523,8 @@
                             continue;
                         }
                         // 合計
-                        totalCountPat = staffData[0].datas.reduce((sum, data) => sum + data.count, 0);
+                        //totalCountPat = staffData[0].datas.reduce((sum, data) => sum + data.count, 0);
+                        totalCountPat = staffData[0].datas.filter((data) => data.month !== -1).reduce((sum, data) => sum + data.count, 0);
                         tableHtml += `<td style="border: 1px solid #ddd; background-color: ${STATE.patternNames.names[i].itemsColor}; padding: 8px; text-align: right;">${totalCountPat}</td>`;
 
                         // 増減
@@ -1463,7 +1537,7 @@
                 });
                 tableHtml += `</tr>`;
 
-                // パターンに存在するが、全体集計に存在しない担当者コードを表示
+                // パターンに存在するが、現在に存在しない担当者コードを表示
                 // （全員新規担当者のため、増減は全てプラス）
                 // パターンの担当者コードと担当者名取得
                 const codesPat = [
@@ -1485,8 +1559,15 @@
                 });
                 const uniqueCodesPat = Array.from(uniqueMap, ([code, name]) => ({ code, name }));
 
-                // 全体集計に存在しない担当者コードを抽出
+                // 現在に存在しない担当者コードを抽出
                 const codesDiff = uniqueCodesPat.filter((item) => !codes.includes(item.code));
+
+                // 担当者コードで並び替え
+                codesDiff.sort((a, b) => {
+                    if (a.code < b.code) return -1;
+                    if (a.code > b.code) return 1;
+                    return 0;
+                });
 
                 let wkCodes = [];
                 codesDiff.forEach((item) => {
@@ -1531,7 +1612,7 @@
 
                 console.log(total);
                 await Swal.fire({
-                    title: '担当者別集計',
+                    title: title,
                     html: tableHtml,
                     //width: '600px',
                     confirmButtonText: '閉じる',
@@ -1852,7 +1933,7 @@
                         }
                         const cellValue = key === nm ? item.datas[cd] : item.datas[key] ?? '';
                         if (filterValue === '') return true; // 絞込なし
-                        if (filterValue === '__EMPTY__') return cellValue === ''; // 空のみ
+                        if (filterValue === EMPTY_VALUE) return cellValue === ''; // 空のみ
                         return cellValue.toLowerCase().includes(filterValue.toLowerCase());
                     });
                 });
@@ -2191,9 +2272,9 @@
                 if (code !== '') {
                     const staff = STATE.selectStaffs.find((staff) => staff[STAFFMASTER_FIELD.staffCode.cd] === code);
                     const orgs = staff[STAFFMASTER_FIELD.organization.cd];
-                    STATE.listData.datas[index].datas[org] = '[' + orgs[0].code + ']' + orgs[0].name;
-                    STATE.listData.datas[index].datas[orgCd] = orgs[0].code;
-                    STATE.listData.datas[index].datas[orgNm] = orgs[0].name;
+                    STATE.listData.datas[index].datas[org] = '[' + orgs.at(CONF.radOrg).code + ']' + orgs.at(CONF.radOrg).name;
+                    STATE.listData.datas[index].datas[orgCd] = orgs.at(CONF.radOrg).code;
+                    STATE.listData.datas[index].datas[orgNm] = orgs.at(CONF.radOrg).name;
                 } else {
                     // 空の場合は所属も空にする
                     STATE.listData.datas[index].datas[org] = '';
@@ -2220,8 +2301,9 @@
                 }
                 return color;
             };
+
             /**
-             * コードから背景色を設定（アイテム用）
+             * コードから背景色を設定（データ用）
              * @param {string} key コード
              * @return {string} 背景色
              */
@@ -2385,7 +2467,7 @@
                 if (fields.indexOf(CUSTOMERCHART_FIELD.fiscalMonth.cd) === -1) {
                     fields.push(CUSTOMERCHART_FIELD.fiscalMonth.cd);
                 } else {
-                    itemCount++;
+                    //itemCount++;
                 }
 
                 // 項目の並び順を変更する
@@ -2553,6 +2635,7 @@
 
                     STATE.listData.datas = items;
                     STATE.itemLength = STATE.listData.items.length - itemCount - 2;
+                    //STATE.itemLength = STATE.listData.items.length - 2;
                     STATE.listTotal = { staff: totalStaff, org: totalOrg };
 
                     console.log('records:', records);

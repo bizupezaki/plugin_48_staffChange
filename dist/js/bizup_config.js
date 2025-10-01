@@ -141,6 +141,9 @@
                     if (PARSE_CONF.staffFields) {
                         DATA.staffFields = structuredClone(PARSE_CONF.staffFields);
                     }
+                    if (PARSE_CONF.radOrg) {
+                        DATA.radOrg = structuredClone(PARSE_CONF.radOrg);
+                    }
                 } else {
                     DATA.tableFields = structuredClone(tableFieldsDef);
                 }
@@ -273,7 +276,7 @@
                 </table>
 
                 <h2>集計方法</h2>
-                <label for="radFirstOrg" class="radio-option"><input type="radio" @change="" id="radFirstOrg" name="radFirstOrg" v-model="DATA.radOrg" :value="0" checked />最初の所属組織で集計</label>
+                <label for="radFirstOrg" class="radio-option"><input type="radio" @change="" id="radFirstOrg" name="radFirstOrg" v-model="DATA.radOrg" :value="0" />最初の所属組織で集計</label>
                 <label for="radLastOrg"><input type="radio" @change="" id="radLastOrg" name="radLastOrg" v-model="DATA.radOrg" :value="-1" />最後の所属組織で集計</label>
 
                 <h2>テーブルフィールド選択</h2>
