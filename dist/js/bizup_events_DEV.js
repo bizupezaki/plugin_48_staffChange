@@ -1486,129 +1486,89 @@
                     return 0;
                 });
 
-                let codes = []; // コードをためる
-                listTotal.forEach((item) => {
-                    if (!item.code || String(item.code).trim() === '') return; // コードが空欄は除外
+                // ソート順を作成
+                // STATE.listTotalのcodeとnameとtotalStaffで作成したstaffのcodeとnameをくっつけて、重複なしでcodeとnameのオブジェクト配列を作成
+                const listTotalItems = (listTotal || []).map((item) => ({ code: item.code, name: item.name })).filter((item) => item.code && String(item.code).trim() !== '');
+                const totalStaffItems = (total || []).flatMap((staffArray) => staffArray.map((item) => ({ code: item.code, name: item.name })).filter((item) => item.code && String(item.code).trim() !== ''));
 
-                    tableHtml += `
-                        <tr>
-                            <!--<td style="border: 1px solid #ddd; padding: 8px;">${item.code}</td>-->
-                            <td style="border: 1px solid #ddd; padding: 8px; text-align: left;">${item.name}</td>
-                    `;
-
-                    for (let i = 0; i < 12; i++) {
-                        const monthData = item.datas.filter((data) => data.month === i + 1);
-                        let wkCount = 0;
-                        if (monthData.length > 0) {
-                            wkCount = monthData[0].count;
-                        } else {
-                            wkCount = 0;
-                        }
-                        tableHtml += `
-                            <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${wkCount}</td>
-                        `;
-                    }
-                    // 顧客数合計
-                    //const totalCount = item.datas.reduce((sum, data) => sum + data.count, 0);
-                    const totalCount = item.datas.filter((data) => data.month !== -1).reduce((sum, data) => sum + data.count, 0);
-                    tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${totalCount}</td>`;
-
-                    // パターンごと
-                    let totalCountPat = 0;
-                    for (let i = 0; i < STATE.patternNames.len; i++) {
-                        const staffData = total[i].filter((s) => s.code === item.code);
-                        if (!staffData || staffData.length <= 0) {
-                            tableHtml += `<td style="border: 1px solid #ddd; background-color: ${STATE.patternNames.names[i].itemsColor}; padding: 8px; text-align: right;">0</td>`;
-                            tableHtml += `<td style="border: 1px solid #ddd; background-color: ${STATE.patternNames.names[i].itemsColor}; padding: 8px; text-align: right;">-${totalCount}</td>`;
-                            continue;
-                        }
-                        // 合計
-                        //totalCountPat = staffData[0].datas.reduce((sum, data) => sum + data.count, 0);
-                        totalCountPat = staffData[0].datas.filter((data) => data.month !== -1).reduce((sum, data) => sum + data.count, 0);
-                        tableHtml += `<td style="border: 1px solid #ddd; background-color: ${STATE.patternNames.names[i].itemsColor}; padding: 8px; text-align: right;">${totalCountPat}</td>`;
-
-                        // 増減
-                        const diff = totalCountPat - totalCount;
-                        tableHtml += `<td style="border: 1px solid #ddd; background-color: ${STATE.patternNames.names[i].itemsColor}; padding: 8px; text-align: right;">${diff}</td>`;
-
-                        // 担当者コードをためる
-                        codes.push(item.code);
-                    }
-                });
-                tableHtml += `</tr>`;
-
-                // パターンに存在するが、現在に存在しない担当者コードを表示
-                // （全員新規担当者のため、増減は全てプラス）
-                // パターンの担当者コードと担当者名取得
-                const codesPat = [
-                    ...new Set(
-                        total.flatMap((group) =>
-                            group.map((item) => {
-                                return { code: item.code, name: item.name };
-                            })
-                        )
-                    ),
-                ];
-
-                // 重複削除
+                // 重複削除（codeをキーとして）
                 const uniqueMap = new Map();
-                codesPat.forEach(({ code, name }) => {
-                    if (code && String(code).trim() !== '' && !uniqueMap.has(code)) {
-                        uniqueMap.set(code, name);
+                [...listTotalItems, ...totalStaffItems].forEach((item) => {
+                    if (!uniqueMap.has(item.code)) {
+                        uniqueMap.set(item.code, item.name);
                     }
                 });
-                const uniqueCodesPat = Array.from(uniqueMap, ([code, name]) => ({ code, name }));
+                const allUniqueItems = Array.from(uniqueMap, ([code, name]) => ({ code, name }));
 
-                // 現在に存在しない担当者コードを抽出
-                const codesDiff = uniqueCodesPat.filter((item) => !codes.includes(item.code));
-
-                // 担当者コードで並び替え
-                codesDiff.sort((a, b) => {
+                // allUniqueItemsをcode順にソート
+                allUniqueItems.sort((a, b) => {
                     if (a.code < b.code) return -1;
                     if (a.code > b.code) return 1;
                     return 0;
                 });
 
-                let wkCodes = [];
-                codesDiff.forEach((item) => {
-                    for (let i = 0; i < STATE.patternNames.len; i++) {
-                        const staff = total[i].filter((s) => s.code === item.code)[0];
+                for (const { code, name } of allUniqueItems) {
+                    //let totalFlg = false;
+                    let totalCount = 0;
 
-                        if (!wkCodes.includes(item.code)) {
-                            // まだ表示していない担当者コードの場合のみ表示
-                            tableHtml += `<tr>`;
-                            tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: left;">${item.name}</td>`;
-                            for (let m = 0; m < 13; m++) {
-                                tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">0</td>`;
+                    tableHtml += `<tr>`;
+                    tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: left;">${name}</td>`;
+
+                    const item = listTotal.find((item) => item.code === code);
+                    if (item) {
+                        // 存在する場合のみ表示
+                        if (!item.code || String(item.code).trim() === '') continue; // コードが空欄は除外
+
+                        for (let i = 0; i < 12; i++) {
+                            const monthData = item.datas.filter((data) => data.month === i + 1);
+                            let wkCount = 0;
+                            if (monthData.length > 0) {
+                                wkCount = monthData[0].count;
+                            } else {
+                                wkCount = 0;
                             }
+                            tableHtml += `
+                                <td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${wkCount}</td>
+                            `;
                         }
-                        if (staff) {
-                            // 合計
-                            totalCountPat = staff.datas.reduce((sum, data) => sum + data.count, 0);
-                            tableHtml += `<td style="border: 1px solid #ddd; background-color: ${STATE.patternNames.names[i].itemsColor}; padding: 8px; text-align: right;">${totalCountPat}</td>`;
+                        // 顧客数合計
+                        //const totalCount = item.datas.reduce((sum, data) => sum + data.count, 0);
+                        totalCount = item.datas.filter((data) => data.month !== -1).reduce((sum, data) => sum + data.count, 0);
+                        tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">${totalCount}</td>`;
+                        //totalFlg = true;
+                    } else {
+                        // 該当コードがない場合
+                        for (let m = 0; m < 13; m++) {
+                            tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: right;">0</td>`;
+                        }
+                    }
 
-                            // 増減（全員新規のため、増減は全てプラス）
-                            tableHtml += `<td style="border: 1px solid #ddd; background-color: ${STATE.patternNames.names[i].itemsColor}; padding: 8px; text-align: right;">${totalCountPat}</td>`;
-                        } else {
-                            // 該当パターンにデータがない場合
+                    // パターンごと
+                    let totalCountPat = 0;
+                    for (let i = 0; i < STATE.patternNames.len; i++) {
+                        const staffData = total[i].filter((p) => p.code === code);
+                        if (!staffData || staffData.length <= 0) {
+                            const wktotal = 0 - totalCount;
                             tableHtml += `<td style="border: 1px solid #ddd; background-color: ${STATE.patternNames.names[i].itemsColor}; padding: 8px; text-align: right;">0</td>`;
-                            tableHtml += `<td style="border: 1px solid #ddd; background-color: ${STATE.patternNames.names[i].itemsColor}; padding: 8px; text-align: right;">0</td>`;
+                            tableHtml += `<td style="border: 1px solid #ddd; background-color: ${STATE.patternNames.names[i].itemsColor}; padding: 8px; text-align: right;">${wktotal}</td>`;
+                            continue;
                         }
-                        // 担当者コードをためる
-                        wkCodes.push(item.code);
+
+                        // 合計
+                        //totalCountPat = staffData[0].datas.reduce((sum, data) => sum + data.count, 0);
+                        totalCountPat = staffData[0].datas.filter((data) => data.month !== -1).reduce((sum, data) => sum + data.count, 0);
+                        tableHtml += `<td style="border: 1px solid #ddd; background-color: ${STATE.patternNames.names[i].itemsColor}; padding: 8px; text-align: right;">${totalCountPat}</td>`;
+                        // 増減
+                        const diff = totalCountPat - totalCount;
+                        tableHtml += `<td style="border: 1px solid #ddd; background-color: ${STATE.patternNames.names[i].itemsColor}; padding: 8px; text-align: right;">${diff}</td>`;
                     }
                     tableHtml += `</tr>`;
-                });
+                }
 
                 tableHtml += `
-                            <!--</tr>-->
                         </tbody>
                     </table>
                 `;
-
-                /*tableHtml += `
-                    <p>test:${totalStaff.value[0][0].name}</p>
-                `;*/
 
                 console.log(total);
                 await Swal.fire({
@@ -1911,10 +1871,12 @@
                             nm = PATTERN_NAME_ITEMS[6].label;
                         } else if (key === SELECTTYPE_NAME_ITEMS[3].cd) {
                             cd = PATTERN_NAME_ITEMS[7].cd;
-                            nm = PATTERN_NAME_ITEMS[8].label;
+                            //nm = PATTERN_NAME_ITEMS[8].label;
+                            nm = SELECTTYPE_NAME_ITEMS[3].cd;
                         } else if (key === SELECTTYPE_NAME_ITEMS[4].cd) {
                             cd = PATTERN_NAME_ITEMS[9].cd;
-                            nm = PATTERN_NAME_ITEMS[10].label;
+                            //nm = PATTERN_NAME_ITEMS[10].label;
+                            nm = SELECTTYPE_NAME_ITEMS[4].cd;
                         } else {
                             // この箇所はメソッドにするかも
                             // 新パターン名での絞込対応
@@ -1928,10 +1890,17 @@
                                 } else if (str === '新' + PATTERN_NAME_ITEMS[4].cd) {
                                     cd = '新' + PATTERN_NAME_ITEMS[3].cd + num;
                                     nm = '新' + PATTERN_NAME_ITEMS[4].label + num;
+                                } else if (str === '新' + SELECTTYPE_NAME_ITEMS[3].cd) {
+                                    cd = '新' + PATTERN_NAME_ITEMS[7].cd + num;
+                                    nm = '新' + SELECTTYPE_NAME_ITEMS[3].cd + num;
+                                } else if (str === '新' + SELECTTYPE_NAME_ITEMS[4].cd) {
+                                    cd = '新' + PATTERN_NAME_ITEMS[9].cd + num;
+                                    nm = '新' + SELECTTYPE_NAME_ITEMS[4].cd + num;
                                 }
                             }
                         }
-                        const cellValue = key === nm ? item.datas[cd] : item.datas[key] ?? '';
+                        const cellValue = String((key === nm ? item.datas[cd] : item.datas[key] ?? '') ?? '');
+                        //nm cd
                         if (filterValue === '') return true; // 絞込なし
                         if (filterValue === EMPTY_VALUE) return cellValue === ''; // 空のみ
                         return cellValue.toLowerCase().includes(filterValue.toLowerCase());
@@ -2056,7 +2025,8 @@
                         .filter((item) => Array.isArray(item[STAFFMASTER_FIELD.organization.cd]) && item[STAFFMASTER_FIELD.organization.cd].length > 0)
                         .flatMap((item) =>
                             item[STAFFMASTER_FIELD.organization.cd].map((org) => ({
-                                label: '[' + org.code + ']' + org.name,
+                                //label: '[' + org.code + ']' + org.name,
+                                label: org.name,
                                 value: org.code,
                             }))
                         );
@@ -2075,7 +2045,8 @@
                             }
                             if (departmentCode && !pairsCodes.includes(departmentCode)) {
                                 pairs.push({
-                                    label: '[' + departmentCode + ']' + departmentName,
+                                    //label: '[' + departmentCode + ']' + departmentName,
+                                    label: departmentName,
                                     value: departmentCode,
                                 });
                             }
@@ -2562,7 +2533,8 @@
                         items[i].datas[PATTERN_NAME_ITEMS[7].cd] = wkcode; // 所属はコード
                         items[i].datas[PATTERN_NAME_ITEMS[8].label] = wkname; // 所属は名称
                         if (wkcode !== '' && wkname !== '') {
-                            items[i].datas[SELECTTYPE_NAME_ITEMS[3].cd] = '[' + wkcode + ']' + wkname;
+                            //items[i].datas[SELECTTYPE_NAME_ITEMS[3].cd] = '[' + wkcode + ']' + wkname;
+                            items[i].datas[SELECTTYPE_NAME_ITEMS[3].cd] = wkname;
                         } else {
                             items[i].datas[SELECTTYPE_NAME_ITEMS[3].cd] = '';
                         }
@@ -2577,7 +2549,7 @@
                         items[i].datas[PATTERN_NAME_ITEMS[9].cd] = wkcode; // 所属はコード
                         items[i].datas[PATTERN_NAME_ITEMS[10].label] = wkname; // 所属は名称
                         if (wkcode !== '' && wkname !== '') {
-                            items[i].datas[SELECTTYPE_NAME_ITEMS[4].cd] = '[' + wkcode + ']' + wkname;
+                            items[i].datas[SELECTTYPE_NAME_ITEMS[4].cd] = wkname;
                         } else {
                             items[i].datas[SELECTTYPE_NAME_ITEMS[4].cd] = '';
                         }
