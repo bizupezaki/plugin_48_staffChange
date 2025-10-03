@@ -49,6 +49,11 @@
         subStaff: { cd: '副担当者', type: 'SINGLE_LINE_TEXT', name: '副担当者' },
         fiscalMonth: { cd: 'ドロップダウン_決算月', type: 'DROP_DOWN', name: '決算月' },
         staffChangeHistoryTable: { cd: '担当者変更履歴テーブル', type: 'SUBTABLE', name: '担当者変更履歴テーブル' },
+        changeDate: { cd: '担当者変更日', type: 'DATE', name: '担当者変更日' },
+        changedBy: { cd: '変更担当', type: 'SINGLE_LINE_TEXT', name: '変更担当' },
+        previousStaff: { cd: '変更前担当者', type: 'SINGLE_LINE_TEXT', name: '変更前担当者' },
+        newStaff: { cd: '変更後担当者', type: 'SINGLE_LINE_TEXT', name: '変更後担当者' },
+        changeNote: { cd: '変更履歴備考', type: 'SINGLE_LINE_TEXT', name: '変更履歴備考' },
     };
 
     // 担当者変更のフィールド定義（appID:324）
@@ -709,12 +714,14 @@
                                 [subStaff[2]]: idxS2 !== -1 ? matched[PATTERN_NAME_ITEMS[4].cd] : '',
                                 [wkSubStaff]: idxS2 !== -1 ? '[' + matched[PATTERN_NAME_ITEMS[3].cd] + ']' + matched[PATTERN_NAME_ITEMS[4].cd] : '',
 
-                                [department[0]]: idxS1 !== -1 ? '[' + matched[PATTERN_NAME_ITEMS[7].cd] + ']' + matched[PATTERN_NAME_ITEMS[8].cd] : '', // 担当者所属
+                                //[department[0]]: idxS1 !== -1 ? '[' + matched[PATTERN_NAME_ITEMS[7].cd] + ']' + matched[PATTERN_NAME_ITEMS[8].cd] : '', // 担当者所属
+                                [department[0]]: idxS1 !== -1 ? matched[PATTERN_NAME_ITEMS[8].cd] : '', // 担当者所属
                                 [department[1]]: idxS1 !== -1 ? matched[PATTERN_NAME_ITEMS[7].cd] : '',
                                 [department[2]]: idxS1 !== -1 ? matched[PATTERN_NAME_ITEMS[8].cd] : '',
                                 [wkDepartment]: idxS1 !== -1 ? '[' + matched[PATTERN_NAME_ITEMS[7].cd] + ']' + matched[PATTERN_NAME_ITEMS[8].cd] : '',
 
-                                [subDepartment[0]]: idxS2 !== -1 ? '[' + matched[PATTERN_NAME_ITEMS[9].cd] + ']' + matched[PATTERN_NAME_ITEMS[10].cd] : '', // 副担当者所属
+                                //[subDepartment[0]]: idxS2 !== -1 ? '[' + matched[PATTERN_NAME_ITEMS[9].cd] + ']' + matched[PATTERN_NAME_ITEMS[10].cd] : '', // 副担当者所属
+                                [subDepartment[0]]: idxS2 !== -1 ? matched[PATTERN_NAME_ITEMS[10].cd] : '', // 副担当者所属
                                 [subDepartment[1]]: idxS2 !== -1 ? matched[PATTERN_NAME_ITEMS[9].cd] : '',
                                 [subDepartment[2]]: idxS2 !== -1 ? matched[PATTERN_NAME_ITEMS[10].cd] : '',
                                 [wkSubDepartment]: idxS2 !== -1 ? '[' + matched[PATTERN_NAME_ITEMS[9].cd] + ']' + matched[PATTERN_NAME_ITEMS[10].cd] : '',
@@ -824,7 +831,16 @@
                             //[CUSTOMERCHART_FIELD.staff.cd]: { value: data.datas[staffCode[0]], lookup: true }, // 担当者コード
                             [CUSTOMERCHART_FIELD.staff.cd]: { value: data.datas[staffCode[1]], lookup: true }, // 担当者
                             [CUSTOMERCHART_FIELD.subStaff.cd]: { value: data.datas[subStaffCode[1]], lookup: true }, // 副担当者
-                            //[CUSTOMERCHART_FIELD.staffChangeHistoryTable.cd]:{value:{[a]:{value:1}}}, // 担当者変更履歴（テーブル）
+                            /*[CUSTOMERCHART_FIELD.staffChangeHistoryTable.cd]: {
+                                // 担当者変更履歴（テーブル）
+                                value: {
+                                    [CUSTOMERCHART_FIELD.changeDate.cd]: { value: updatedAt }, // 担当者変更日
+                                    //[CUSTOMERCHART_FIELD.changedBy.cd]: { value: data.datas[staffCode[1]] }, // 変更担当
+                                    [CUSTOMERCHART_FIELD.previousStaff.cd]: { value: data.datas[backupStaff[1]] }, // 変更前担当者
+                                    [CUSTOMERCHART_FIELD.newStaff.cd]: { value: data.datas[staffCode[1]] }, // 変更後担当者
+                                    //[CUSTOMERCHART_FIELD.changeNote.cd]: { value: 'パターン『' + item.name + '』を適用' }, // 変更履歴備考
+                                },
+                            },*/
                         },
                     };
                 });
