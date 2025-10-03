@@ -1,4 +1,7 @@
 #bz_update_staffs_container_DEV {
+    --hc-height: 0px;
+    --top: 48px;
+
     margin: 20px;
     &,
     * {
@@ -14,7 +17,14 @@
     button {
         white-space: nowrap;
     }
-        
+    
+    #bz_header {
+        position: sticky;
+        top: var(--top);
+        background: #ffffff;
+        z-index: 1;
+    }
+
     table.bz_table_def {
         border-collapse: separate;
         border-spacing: 0;
@@ -24,6 +34,11 @@
 
         thead {
             background-color: #eee;
+
+            position: sticky;
+            border-collapse: separate;
+            top: calc(var(--hc-height) + var(--top));
+            z-index: 2;
         }
 
         th,
@@ -38,9 +53,5 @@
                 background-color: #ccc;
             }
         }
-    }
-    // 後に変数で指定できるようにする
-    .highlighted {
-        background-color: #ffeeba;
     }
 }

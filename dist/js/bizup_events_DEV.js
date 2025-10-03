@@ -6,7 +6,7 @@
     ('use strict');
 
     const CONTAINER_ID = '#bz_update_staffs_container_DEV';
-    const { ref, reactive, h, computed, onMounted } = Vue;
+    const { ref, reactive, h, computed, onMounted, nextTick } = Vue;
 
     // 設定値読み込み用変数
     var CONFDATA = kintone.plugin.app.getConfig(PLUGIN_ID);
@@ -48,6 +48,7 @@
         staff: { cd: '担当者', type: 'SINGLE_LINE_TEXT', name: '担当者' },
         subStaff: { cd: '副担当者', type: 'SINGLE_LINE_TEXT', name: '副担当者' },
         fiscalMonth: { cd: 'ドロップダウン_決算月', type: 'DROP_DOWN', name: '決算月' },
+        staffChangeHistoryTable: { cd: '担当者変更履歴テーブル', type: 'SUBTABLE', name: '担当者変更履歴テーブル' },
     };
 
     // 担当者変更のフィールド定義（appID:324）
@@ -571,6 +572,11 @@
                 STATE.filters[subStaff[0]] = '';
                 STATE.filters[department[0]] = '';
                 STATE.filters[subDepartment[0]] = '';
+
+                // stickyヘッダー対応
+                nextTick(() => {
+                    bizupUtil.common.setStickyHeaderHeight(CONTAINER_ID, '');
+                });
             };
 
             /**
@@ -597,9 +603,14 @@
                     const key = STAFF_CHANGE_FIELDCD.patternName.cd;
                     const label = STAFF_CHANGE_FIELDCD.patternName.name;
                     let patterns = [];
-                    let tableHtml = '<table id="patternTable" style="width:100%; border-collapse: collapse;">';
+                    let style = `<style>
+                        .swal2-html-container {
+                            padding-top:0 !important;
+                        }
+                    </style>`;
+                    let tableHtml = '<div style=""><table id="patternTable" style="width:100%; border: none; border-collapse: separate;">';
                     tableHtml += '<thead><tr>';
-                    tableHtml += `<th style="border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2; text-align: center;">${label}</th>`;
+                    tableHtml += `<th style="position: sticky; top: 0; border-collapse: separate; border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2; text-align: center;">${label}</th>`;
                     tableHtml += '</tr></thead>';
                     tableHtml += '<tbody>';
                     records.forEach((rec) => {
@@ -611,11 +622,11 @@
                         // JSONデータを取得
                         patterns.push({ name: rec[key].value, jsonData: rec[STAFF_CHANGE_FIELDCD.jsonData.cd]?.value ?? '', id: rec[EXCEPT_ITEMS[0]].value, revision: rec[EXCEPT_ITEMS[1]].value });
                     });
-                    tableHtml += '</tbody></table>';
+                    tableHtml += '</tbody></table></div>';
                     tableHtml += '<input type="hidden" id="clickName" name="clickName" value="">';
                     const result = await Swal.fire({
                         title: '取得データ一覧',
-                        html: tableHtml,
+                        html: style + tableHtml,
                         showCancelButton: true,
                         confirmButtonText: '実行',
                         cancelButtonText: 'キャンセル',
@@ -733,6 +744,11 @@
                 } catch (error) {
                     console.error('openPattern取得失敗:', error.error);
                 }
+
+                // stickyヘッダー対応
+                nextTick(() => {
+                    bizupUtil.common.setStickyHeaderHeight(CONTAINER_ID, '');
+                });
             };
 
             /**
@@ -778,8 +794,8 @@
                 subStaff[4] = SELECTTYPE_NAME_ITEMS[1].cd; // 副担当者コード名
                 subStaff[5] = SELECTTYPE_NAME_ITEMS[4].cd; // 副担当者所属コード名
 
+                // 以前データをバックアップする
                 STATE.listData.datas.forEach((data) => {
-                    // 以前データをバックアップする
                     // 担当者
                     for (let i = 0; i < backupStaff.length; i++) {
                         data.datas[backupStaff[i]] = data.datas[staff[i]];
@@ -808,6 +824,7 @@
                             //[CUSTOMERCHART_FIELD.staff.cd]: { value: data.datas[staffCode[0]], lookup: true }, // 担当者コード
                             [CUSTOMERCHART_FIELD.staff.cd]: { value: data.datas[staffCode[1]], lookup: true }, // 担当者
                             [CUSTOMERCHART_FIELD.subStaff.cd]: { value: data.datas[subStaffCode[1]], lookup: true }, // 副担当者
+                            //[CUSTOMERCHART_FIELD.staffChangeHistoryTable.cd]:{value:{[a]:{value:1}}}, // 担当者変更履歴（テーブル）
                         },
                     };
                 });
@@ -1080,22 +1097,51 @@
              */
             const replaceAllHTML = (staffsNew) => {
                 const html = `
-                <div style="text-align: left;">
-                    <p>変更する担当者区分を選択してください</p>
+                <style>
+                    .form-block {
+                        width: 398.29px;
+                        height: 210.29px;
+                        padding: 12px;
+                        box-sizing: border-box;
+                        border: 1px solid #888;
+                        margin: 8px;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 8px;
+                        justify-content: center;
+                    }
+                </style>
+                <div style="display: flex; justify-content: center; align-items: center; flex-direction: column;">
+                    <div style="text-align: left;">
+                        <p>変更する担当者区分を選択してください</p>
                         <span style="display:inline-block; border:1px solid #888; padding:4px 12px; margin-left:37px; margin-bottom:4px;">
                             <label style="margin:0;"><input type="checkbox" id="checkAll"> 全て選択</label>
                         </span><br>
                         <label style="margin-left:50px;"><input type="checkbox" id="staff" name="item" value="staff" checked> 担当者</label><br>
                         <label style="margin-left:50px;"><input type="checkbox" id="subStaff" name="item" value="subStaff"> 副担当者</label><br><br>
-                    <p>変更する担当者を選択してください</p>
-
-                    <p style="margin-left:20px; margin-bottom:4px;">変更元担当者</p>
-                    <label style="margin-left:20px;"><input type="radio" name="staffRadio" value="pattern" checked> このパターンの担当者</label><br>
-                    <label style="margin-left:20px;"><input type="radio" name="staffRadio" value="current"> 現在の顧客カルテの担当者</label><br><br>
-                    <div style="margin-left:20px;" style="display: flex; align-items: center; gap: 8px;">
-                        <select id="staffSelect">${staffsNew}</select>
-                        <span>→</span>
-                        <select id="afterStaffSelect">${staffsNew}</select>
+                        
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="display:inline-block; border:1px solid #888; padding:4px 12px; margin-bottom:4px;">
+                                <p>変更する担当者</p>
+                                <p style="margin-left:20px; margin-bottom:4px;">変更元の担当者</p>
+                                <label style="margin-left:20px;"><input type="radio" name="staffRadio" value="pattern" checked> このパターンの担当者</label><br>
+                                <label style="margin-left:20px;"><input type="radio" name="staffRadio" value="current"> 現在の顧客カルテの担当者</label><br><br>
+                                <select id="staffSelect">${staffsNew}</select>
+                            </span>
+                            <span>→</span>
+                            <!--<span style="display:inline-block; border:1px solid #888; padding:4px 12px; margin-bottom:4px;">-->
+                            <span class="form-block">
+                                
+                                <p>変更後の担当者</p>
+                                
+                                <select id="afterStaffSelect">${staffsNew}</select>
+                            </span>
+                        </div>
+                            <!--<div style="margin-left:20px;" style="display: flex; align-items: center; gap: 8px;">
+                                <select id="staffSelect">${staffsNew}</select>
+                                <span>→</span>
+                                <select id="afterStaffSelect">${staffsNew}</select>
+                            </div>-->
                     </div>
                 </div>
             `;
@@ -1363,7 +1409,7 @@
                     showCancelButton: true,
                     confirmButtonText: '実行',
                     cancelButtonText: 'キャンセル',
-                    width: '600px',
+                    width: '1000px',
                     didOpen: setupBulkReplaceDialogEvents,
                     preConfirm: () => {
                         return validateBulkReplaceForm(item.index);
@@ -2683,6 +2729,11 @@
                 } catch (e) {
                     console.log('担当者取得失敗！:onMounted:', e.error);
                 }
+
+                // stickyヘッダー対応
+                nextTick(() => {
+                    bizupUtil.common.setStickyHeaderHeight(CONTAINER_ID, '');
+                });
                 console.log('STATE:', STATE);
                 //totalStaff();
             });
@@ -2718,13 +2769,13 @@
             };
         },
         template: /* HTML */ `
-            <ul>
-                <li>顧客一覧のテーブル（tableFieldsのフィールド）と担当者フィールド（staffFieldのフィールド）</li>
-                <li>選択したパターンの担当者（staffFieldの分だけ用意）</li>
-                <li>現在と表示中パターンの担当者の顧客数・所属組織の顧客数※複数組織に所属している場合は要検討</li>
-                <li>適用した際は必ず適用日時と適用前のバックアップを取得・JSONに保存</li>
-            </ul>
             <div id="bz_header">
+                <ul>
+                    <li>顧客一覧のテーブル（tableFieldsのフィールド）と担当者フィールド（staffFieldのフィールド）</li>
+                    <li>選択したパターンの担当者（staffFieldの分だけ用意）</li>
+                    <li>現在と表示中パターンの担当者の顧客数・所属組織の顧客数※複数組織に所属している場合は要検討</li>
+                    <li>適用した際は必ず適用日時と適用前のバックアップを取得・JSONに保存</li>
+                </ul>
                 <button @click="addPattern" class="bz_bt_def">パターン追加</button>
                 <button @click="openPattern" class="bz_bt_def">パターン開く</button>
                 <button @click="totalCustomersPer(0)" class="bz_bt_def">担当者集計</button>
