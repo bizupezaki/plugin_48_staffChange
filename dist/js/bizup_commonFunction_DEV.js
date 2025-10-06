@@ -116,6 +116,45 @@
     };
 
     /**
+     * stickyの高さを取得し、CSSの変数（--hc-height）の設定
+     * @param {String} CONTAINER_ID コンテナのID
+     * @param {String} id
+     */
+    const setStickyHeaderHeight = async (CONTAINER_ID, id) => {
+        // stickyの高さを取得する
+        //const sticky1 = document.querySelector('#bz_header');
+        let wkid = id;
+        if (id === '' || id === null || id === undefined) {
+            wkid = 'bz_header';
+        }
+        const sticky = document.querySelector('#' + wkid);
+        let headerHeight = 0;
+        if (sticky) {
+            const rect = sticky.getBoundingClientRect();
+            headerHeight = rect.height;
+        }
+
+        // CSSの変数（--hc-height）の設定
+        const element = document.querySelector(CONTAINER_ID);
+        element.style.setProperty('--hc-height', headerHeight + 'px');
+    };
+
+    /**
+     * URLを生成する
+     * @appId {Number} appId
+     * @param {Number} id
+     */
+    const generateHref = (appId, id) => {
+        let url = '/k/' + appId + '/show#record=' + id;
+        let rc = '';
+
+        // URLを生成する
+        rc = encodeURI(url);
+
+        return rc;
+    };
+
+    /**
      * アプリ内のフィールド定義を取得し、文字列に変換する
      * @param {String} appId(アプリID)
      * @return {String} 定数定義の文字列
@@ -270,5 +309,7 @@
         formatNumberWithCommas: formatNumberWithCommas,
         deepUnproxy: deepUnproxy,
         resizeDialog: resizeDialog,
+        setStickyHeaderHeight: setStickyHeaderHeight,
+        generateHref: generateHref,
     };
 })();

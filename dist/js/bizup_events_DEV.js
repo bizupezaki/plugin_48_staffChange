@@ -61,8 +61,12 @@
         jsonData: { cd: 'JSON', type: 'MULTI_LINE_TEXT', name: 'JSON' },
         patternName: { cd: 'パターン名', type: 'SINGLE_LINE_TEXT', name: 'パターン名' },
         appliedDate: { cd: '適用日', type: 'DATETIME', name: '適用日' },
+        executor: { cd: '実行者', type: 'SINGLE_LINE_TEXT', name: '実行者' },
         id: { readCd: '$id', writeCd: 'id', type: '__ID__', name: '' },
         revision: { readCd: '$revision', writeCd: 'revision', type: '__REVISION__', name: '' },
+        modifier: { cd: '更新者', type: 'MODIFIER', name: '更新者' },
+        updatedTime: { cd: '更新日時', type: 'UPDATED_TIME', name: '更新日時' },
+        createdTime: { cd: '作成日時', type: 'CREATED_TIME', name: '作成日時' },
     };
 
     // パターン追加テーブル
@@ -82,7 +86,7 @@
         `,
         methods: {
             save(item) {
-                this.$emit('savePattern', item);
+                this.$emit('savePattern', item, '', '', 0);
             },
             replaceAll(item) {
                 this.$emit('replaceAllPattern', item);
@@ -452,7 +456,7 @@
 
                 // 入力画面表示
                 const result = await showConfirmSwal({
-                    title: 'パターン追加',
+                    title: '新規パターン追加',
                     text: '新しいパターンの名前を入力してください。',
                     inputType: 'text',
                     confirmButtonText: '実行',
@@ -607,6 +611,10 @@
                     // 画面表示
                     const key = STAFF_CHANGE_FIELDCD.patternName.cd;
                     const label = STAFF_CHANGE_FIELDCD.patternName.name;
+                    const modifier = STAFF_CHANGE_FIELDCD.modifier.name;
+                    const updatedTime = STAFF_CHANGE_FIELDCD.updatedTime.name;
+                    const createdTime = STAFF_CHANGE_FIELDCD.createdTime.name;
+
                     let patterns = [];
                     let style = `<style>
                         .swal2-html-container {
@@ -616,12 +624,25 @@
                     let tableHtml = '<div style=""><table id="patternTable" style="width:100%; border: none; border-collapse: separate;">';
                     tableHtml += '<thead><tr>';
                     tableHtml += `<th style="position: sticky; top: 0; border-collapse: separate; border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2; text-align: center;">${label}</th>`;
+                    tableHtml += `<th style="position: sticky; top: 0; border-collapse: separate; border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2; text-align: center;">${createdTime}</th>`;
+                    tableHtml += `<th style="position: sticky; top: 0; border-collapse: separate; border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2; text-align: center;">${updatedTime}</th>`;
+                    tableHtml += `<th style="position: sticky; top: 0; border-collapse: separate; border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2; text-align: center;">${modifier}</th>`;
                     tableHtml += '</tr></thead>';
                     tableHtml += '<tbody>';
                     records.forEach((rec) => {
                         tableHtml += '<tr>';
-                        let val = rec[key]?.value ?? '';
-                        tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: left;">${val}</td>`;
+                        const wkname = rec[key]?.value ?? '';
+                        let wkcreated = rec[STAFF_CHANGE_FIELDCD.createdTime.cd]?.value ?? '';
+                        let dt = luxon.DateTime.fromJSDate(new Date(wkcreated));
+                        wkcreated = dt.toFormat('yyyy年MM月dd日 HH:mm');
+                        let wkupdated = rec[STAFF_CHANGE_FIELDCD.updatedTime.cd]?.value ?? '';
+                        dt = luxon.DateTime.fromJSDate(new Date(wkupdated));
+                        wkupdated = dt.toFormat('yyyy年MM月dd日 HH:mm');
+                        let wkmodifier = rec[STAFF_CHANGE_FIELDCD.modifier.cd]?.value?.name ?? '';
+                        tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: left;">${wkname}</td>`;
+                        tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${wkcreated}</td>`;
+                        tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${wkupdated}</td>`;
+                        tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: left;">${wkmodifier}</td>`;
                         tableHtml += '</tr>';
 
                         // JSONデータを取得
@@ -630,7 +651,7 @@
                     tableHtml += '</tbody></table></div>';
                     tableHtml += '<input type="hidden" id="clickName" name="clickName" value="">';
                     const result = await Swal.fire({
-                        title: '取得データ一覧',
+                        title: 'パターン一覧',
                         html: style + tableHtml,
                         showCancelButton: true,
                         confirmButtonText: '実行',
@@ -646,7 +667,7 @@
                                 return false;
                             }
                         },
-                        //width: '20%',
+                        width: '60%',
                     });
                     if (result.dismiss === Swal.DismissReason.cancel || result.isConfirmed === false) {
                         // キャンセルの場合
@@ -763,346 +784,411 @@
              * @param {object} item パターンデータ
              */
             const applyCustomerChartPattern = async (item) => {
-                // データのバックアップ（レコード登録失敗時に元に戻すため）
-                const datas = STATE.listData.datas;
-
-                // 更新日時作成
-                luxon.Settings.defaultLocale = 'ja';
-                const updatedAt = luxon.DateTime.now().toUTC().toISO();
-
-                // バックアップ用
-                const backupStaff = [
-                    PATTERN_NAME_ITEMS[1].cd + '_OLD', // 担当者コード
-                    PATTERN_NAME_ITEMS[2].cd + '_OLD', // 担当者名
-                    PATTERN_NAME_ITEMS[7].cd + '_OLD', // 担当者所属コード
-                    PATTERN_NAME_ITEMS[8].cd + '_OLD', // 担当者所属名
-                ];
-                const backupSubStaff = [
-                    PATTERN_NAME_ITEMS[3].cd + '_OLD', // 副担当者コード
-                    PATTERN_NAME_ITEMS[4].cd + '_OLD', // 副担当者名
-                    PATTERN_NAME_ITEMS[9].cd + '_OLD', // 副担当者所属コード
-                    PATTERN_NAME_ITEMS[10].cd + '_OLD', // 副担当者所属名
-                ];
-
-                // 担当者の場合
-                let staff = [];
-                staff[0] = PATTERN_NAME_ITEMS[1].cd; // 担当者コード
-                staff[1] = PATTERN_NAME_ITEMS[2].cd; // 担当者名
-                staff[2] = PATTERN_NAME_ITEMS[7].cd; // 担当者所属コード
-                staff[3] = PATTERN_NAME_ITEMS[8].cd; // 担当者所属名
-                staff[4] = SELECTTYPE_NAME_ITEMS[0].cd; // 担当者コード名
-                staff[5] = SELECTTYPE_NAME_ITEMS[3].cd; // 担当者所属コード名
-                // 副担当者の場合
-                let subStaff = [];
-                subStaff[0] = PATTERN_NAME_ITEMS[3].cd; // 副担当者コード
-                subStaff[1] = PATTERN_NAME_ITEMS[4].cd; // 副担当者名
-                subStaff[2] = PATTERN_NAME_ITEMS[9].cd; // 副担当者所属コード
-                subStaff[3] = PATTERN_NAME_ITEMS[10].cd; // 副担当者所属名
-                subStaff[4] = SELECTTYPE_NAME_ITEMS[1].cd; // 副担当者コード名
-                subStaff[5] = SELECTTYPE_NAME_ITEMS[4].cd; // 副担当者所属コード名
-
-                // 以前データをバックアップする
-                STATE.listData.datas.forEach((data) => {
-                    // 担当者
-                    for (let i = 0; i < backupStaff.length; i++) {
-                        data.datas[backupStaff[i]] = data.datas[staff[i]];
-                    }
-                    // 副担当者
-                    for (let i = 0; i < backupSubStaff.length; i++) {
-                        data.datas[backupSubStaff[i]] = data.datas[subStaff[i]];
-                    }
+                // メッセージを表示
+                Swal.fire({
+                    title: '顧客カルテに適用中...',
+                    allowOutsideClick: false, // ポップアップの外をクリックしても、画面を閉じない
+                    didOpen: async () => {
+                        Swal.showLoading();
+                        await applyPatternToChart();
+                    },
                 });
 
-                // 顧客カルテ更新（担当者が変更になったものだけを更新する）
-                // 項目名を取得
-                const staffCode = ['新' + PATTERN_NAME_ITEMS[1].cd + item.index, '新' + PATTERN_NAME_ITEMS[2].cd + item.index, '新' + SELECTTYPE_NAME_ITEMS[0].cd + item.index];
-                const subStaffCode = ['新' + PATTERN_NAME_ITEMS[3].cd + item.index, '新' + PATTERN_NAME_ITEMS[4].cd + item.index, '新' + SELECTTYPE_NAME_ITEMS[1].cd + item.index];
-                const departmentCode = ['新' + PATTERN_NAME_ITEMS[7].cd + item.index, '新' + PATTERN_NAME_ITEMS[8].cd + item.index, '新' + SELECTTYPE_NAME_ITEMS[3].cd + item.index];
-                const subDepartmentCode = ['新' + PATTERN_NAME_ITEMS[9].cd + item.index, '新' + PATTERN_NAME_ITEMS[10].cd + item.index, '新' + SELECTTYPE_NAME_ITEMS[4].cd + item.index];
+                const applyPatternToChart = async () => {
+                    // データのバックアップ（レコード登録失敗時に元に戻すため）
+                    const datas = STATE.listData.datas;
 
-                // 更新データ作成
-                const updateList = STATE.listData.datas.filter((data) => data.datas[staffCode[0]] !== data.datas[backupStaff[0]] || data.datas[subStaffCode[0]] !== data.datas[backupSubStaff[0]]);
+                    // 更新日時作成
+                    luxon.Settings.defaultLocale = 'ja';
+                    const updatedAt = luxon.DateTime.now().toUTC().toISO();
 
-                const updateData = updateList.map((data) => {
-                    return {
-                        [CUSTOMERCHART_FIELD.id.writeCd]: data.datas[EXCEPT_ITEMS[0]], // レコードID
-                        [CUSTOMERCHART_FIELD.revision.writeCd]: data.datas[EXCEPT_ITEMS[1]], // リビジョン
-                        record: {
-                            //[CUSTOMERCHART_FIELD.staff.cd]: { value: data.datas[staffCode[0]], lookup: true }, // 担当者コード
-                            [CUSTOMERCHART_FIELD.staff.cd]: { value: data.datas[staffCode[1]], lookup: true }, // 担当者
-                            [CUSTOMERCHART_FIELD.subStaff.cd]: { value: data.datas[subStaffCode[1]], lookup: true }, // 副担当者
-                            /*[CUSTOMERCHART_FIELD.staffChangeHistoryTable.cd]: {
-                                // 担当者変更履歴（テーブル）
-                                value: {
-                                    [CUSTOMERCHART_FIELD.changeDate.cd]: { value: updatedAt }, // 担当者変更日
-                                    //[CUSTOMERCHART_FIELD.changedBy.cd]: { value: data.datas[staffCode[1]] }, // 変更担当
-                                    [CUSTOMERCHART_FIELD.previousStaff.cd]: { value: data.datas[backupStaff[1]] }, // 変更前担当者
-                                    [CUSTOMERCHART_FIELD.newStaff.cd]: { value: data.datas[staffCode[1]] }, // 変更後担当者
-                                    //[CUSTOMERCHART_FIELD.changeNote.cd]: { value: 'パターン『' + item.name + '』を適用' }, // 変更履歴備考
-                                },
-                            },*/
-                        },
-                    };
-                });
+                    // 更新者
+                    const executor = kintone.getLoginUser().name;
 
-                // 更新データがない場合、メッセージを表示
-                if (updateData.length === 0) {
+                    // 担当者の場合
+                    let staff = [];
+                    staff[0] = PATTERN_NAME_ITEMS[1].cd; // 担当者コード
+                    staff[1] = PATTERN_NAME_ITEMS[2].cd; // 担当者名
+                    staff[2] = PATTERN_NAME_ITEMS[7].cd; // 担当者所属コード
+                    staff[3] = PATTERN_NAME_ITEMS[8].cd; // 担当者所属名
+                    staff[4] = SELECTTYPE_NAME_ITEMS[0].cd; // 担当者コード名
+                    staff[5] = SELECTTYPE_NAME_ITEMS[3].cd; // 担当者所属コード名
+                    // 副担当者の場合
+                    let subStaff = [];
+                    subStaff[0] = PATTERN_NAME_ITEMS[3].cd; // 副担当者コード
+                    subStaff[1] = PATTERN_NAME_ITEMS[4].cd; // 副担当者名
+                    subStaff[2] = PATTERN_NAME_ITEMS[9].cd; // 副担当者所属コード
+                    subStaff[3] = PATTERN_NAME_ITEMS[10].cd; // 副担当者所属名
+                    subStaff[4] = SELECTTYPE_NAME_ITEMS[1].cd; // 副担当者コード名
+                    subStaff[5] = SELECTTYPE_NAME_ITEMS[4].cd; // 副担当者所属コード名
+
+                    // 以前データをバックアップする
+                    STATE.listData.datas.forEach((data) => {
+                        // 担当者　副担当者
+                        for (let i = 0; i < 4; i++) {
+                            if (data.datas.OLD) {
+                                data.datas.OLD[staff[i]] = data.datas[staff[i]];
+                                data.datas.OLD[subStaff[i]] = data.datas[subStaff[i]];
+                            } else {
+                                data.datas['OLD'] = {
+                                    [staff[i]]: data.datas[staff[i]],
+                                    [subStaff[i]]: data.datas[subStaff[i]],
+                                };
+                            }
+                        }
+                    });
+
+                    // 顧客カルテ更新（担当者が変更になったものだけを更新する）
+                    // 項目名を取得
+                    const staffCode = ['新' + PATTERN_NAME_ITEMS[1].cd + item.index, '新' + PATTERN_NAME_ITEMS[2].cd + item.index, '新' + SELECTTYPE_NAME_ITEMS[0].cd + item.index];
+                    const subStaffCode = ['新' + PATTERN_NAME_ITEMS[3].cd + item.index, '新' + PATTERN_NAME_ITEMS[4].cd + item.index, '新' + SELECTTYPE_NAME_ITEMS[1].cd + item.index];
+                    const departmentCode = ['新' + PATTERN_NAME_ITEMS[7].cd + item.index, '新' + PATTERN_NAME_ITEMS[8].cd + item.index, '新' + SELECTTYPE_NAME_ITEMS[3].cd + item.index];
+                    const subDepartmentCode = ['新' + PATTERN_NAME_ITEMS[9].cd + item.index, '新' + PATTERN_NAME_ITEMS[10].cd + item.index, '新' + SELECTTYPE_NAME_ITEMS[4].cd + item.index];
+
+                    // 更新データ作成
+                    const updateList = STATE.listData.datas.filter((data) => data.datas[staffCode[0]] !== data.datas.OLD[staff[0]] || data.datas[subStaffCode[0]] !== data.datas.OLD[subStaff[0]]);
+
+                    const updateData = updateList.map((data) => {
+                        return {
+                            [CUSTOMERCHART_FIELD.id.writeCd]: data.datas[EXCEPT_ITEMS[0]], // レコードID
+                            //[CUSTOMERCHART_FIELD.id.writeCd]: 1000, // レコードID（テスト用）
+                            [CUSTOMERCHART_FIELD.revision.writeCd]: data.datas[EXCEPT_ITEMS[1]], // リビジョン
+                            record: {
+                                //[CUSTOMERCHART_FIELD.staff.cd]: { value: data.datas[staffCode[0]], lookup: true }, // 担当者コード
+                                [CUSTOMERCHART_FIELD.staff.cd]: { value: data.datas[staffCode[1]], lookup: true }, // 担当者
+                                [CUSTOMERCHART_FIELD.subStaff.cd]: { value: data.datas[subStaffCode[1]], lookup: true }, // 副担当者
+                            },
+                        };
+                    });
+
+                    // 更新データがない場合、メッセージを表示
+                    if (updateData.length === 0) {
+                        Swal.hideLoading();
+                        console.log('顧客カルテに適用する更新データがありません。');
+                        Swal.update({
+                            title: '更新データなし',
+                            icon: 'info',
+                            text: '顧客カルテに適用する更新データがありません。',
+                        });
+                        return;
+                    }
+
+                    // レコード更新
+                    // 顧客カルテ更新
+                    let ref = null;
+                    try {
+                        ref = await updateRecords(updateData, utils.constants.CUSTOMER_APP_ID);
+                    } catch (error) {
+                        console.error('顧客カルテの適用に失敗しました。', error.error);
+                        //error.error.headers['x-cybozu-error']
+                        //const headerCode = error.error?.headers?.['x-cybozu-error'];
+                        const errorCode = error.error?.code;
+                        if (errorCode === 'GAIA_CO02') {
+                            Swal.hideLoading();
+                            Swal.update({
+                                title: '顧客カルテの適用失敗',
+                                html: '<div>他のユーザが編集した可能性があります。<br>最新の内容を再表示後、再度適用を試みてください。</div>',
+                                icon: 'warning',
+                                confirmButtonText: '閉じる',
+                            });
+                        } else {
+                            Swal.hideLoading();
+                            Swal.update({
+                                title: '顧客カルテの適用失敗',
+                                text: '顧客カルテの更新に失敗しました。',
+                                icon: 'error',
+                                confirmButtonText: '閉じる',
+                            });
+                        }
+
+                        // 更新に失敗した場合、データを戻す
+                        STATE.listData.datas = datas;
+                        return;
+                    }
+
+                    // パターン更新
+                    try {
+                        const save = await savePattern(item, updatedAt, executor, 1);
+                    } catch (error) {
+                        console.error('パターン更新に失敗しました。', error.error);
+                        //error.error.headers['x-cybozu-error']
+                        //const headerCode = error.error?.headers?.['x-cybozu-error'];
+                        const errorCode = error.error?.code;
+                        if (errorCode === 'GAIA_CO02') {
+                            Swal.hideLoading();
+                            await Swal.fire({
+                                title: 'パターンの更新失敗',
+                                html: '<div>他のユーザが編集した可能性があります。<br>最新の内容を再表示後、再度適用を試みてください。</div>',
+                                icon: 'warning',
+                                confirmButtonText: '閉じる',
+                            });
+                        } else {
+                            Swal.hideLoading();
+                            await Swal.fire({
+                                title: 'パターンの更新失敗',
+                                text: 'パターンの更新に失敗しました。',
+                                icon: 'error',
+                                confirmButtonText: '閉じる',
+                                allowOutsideClick: false,
+                            });
+                        }
+
+                        // 更新に失敗しても、顧客カルテは更新されているので、データは戻さない
+                        //STATE.listData.datas = datas;
+                        //return;
+                    }
+
+                    // 表示データを更新
+                    const updatedArrays = ref.records.reduce((acc, r) => {
+                        return acc.map((data) => {
+                            if (data.datas[EXCEPT_ITEMS[0]] === r.id) {
+                                return {
+                                    ...data,
+                                    datas: {
+                                        ...data.datas,
+                                        [EXCEPT_ITEMS[1]]: r.revision,
+                                        [PATTERN_NAME_ITEMS[1].cd]: data.datas[staffCode[0]], // 担当者コード
+                                        [PATTERN_NAME_ITEMS[2].cd]: data.datas[staffCode[1]], // 担当者
+                                        [SELECTTYPE_NAME_ITEMS[0].cd]: data.datas[staffCode[2]], // 担当者コード名
+
+                                        [PATTERN_NAME_ITEMS[7].cd]: data.datas[departmentCode[0]], // 担当者所属コード
+                                        [PATTERN_NAME_ITEMS[8].cd]: data.datas[departmentCode[1]], // 担当者所属
+                                        [SELECTTYPE_NAME_ITEMS[3].cd]: data.datas[departmentCode[2]], // 担当者所属コード名
+
+                                        [PATTERN_NAME_ITEMS[3].cd]: data.datas[subStaffCode[0]], // 副担当者コード
+                                        [PATTERN_NAME_ITEMS[4].cd]: data.datas[subStaffCode[1]], // 副担当者
+                                        [SELECTTYPE_NAME_ITEMS[1].cd]: data.datas[subStaffCode[2]], // 副担当者コード名
+
+                                        [PATTERN_NAME_ITEMS[9].cd]: data.datas[subDepartmentCode[0]], // 副担当者所属コード
+                                        [PATTERN_NAME_ITEMS[10].cd]: data.datas[subDepartmentCode[1]], // 副担当者所属
+                                        [SELECTTYPE_NAME_ITEMS[4].cd]: data.datas[subDepartmentCode[2]], // 副担当者所属コード名
+                                    },
+                                };
+                            } else {
+                                return data;
+                            }
+                        });
+                    }, STATE.listData.datas);
+
+                    STATE.listData.datas = updatedArrays;
+
+                    // 担当者ごとに集計
+                    let totalStaff = [];
+                    let totalOrg = [];
+                    // STATE.listData.datasにある担当者コードごとで決算月ごとにデータの数を集計
+                    STATE.listData.datas.forEach((item) => {
+                        const staffCode = item.datas[PATTERN_NAME_ITEMS[1].cd]; // 担当者コード
+                        const staffName = item.datas[PATTERN_NAME_ITEMS[2].cd]; // 担当者名
+                        const orgCode = item.datas[PATTERN_NAME_ITEMS[7].cd]; // 担当者所属コード
+                        const orgName = item.datas[PATTERN_NAME_ITEMS[8].cd]; // 担当者所属名
+                        const fiscalMonth = parseInt(item.datas[CUSTOMERCHART_FIELD.fiscalMonth.cd]) || 0; // 決算月
+
+                        // 既存の担当者データを検索
+                        let matchStaff = totalStaff.find((data) => data.code === staffCode);
+                        let matchOrg = totalOrg.find((data) => data.code === orgCode);
+
+                        if (matchStaff) {
+                            // 既存担当者の場合、該当月のカウントを増やす
+                            let monthData = matchStaff.datas.find((d) => d.month === fiscalMonth);
+                            if (monthData) {
+                                monthData.count++;
+                            } else {
+                                matchStaff.datas.push({ month: fiscalMonth, count: 1 });
+                            }
+                        } else {
+                            // 新規担当者の場合、新しいエントリを作成
+                            totalStaff.push({
+                                code: staffCode,
+                                name: staffName,
+                                datas: [{ month: fiscalMonth, count: 1 }],
+                            });
+                        }
+
+                        // 所属ごとに集計
+                        if (matchOrg) {
+                            // 既存所属の場合、該当月のカウントを増やす
+                            let monthData = matchOrg.datas.find((d) => d.month === fiscalMonth);
+                            if (monthData) {
+                                monthData.count++;
+                            } else {
+                                matchOrg.datas.push({ month: fiscalMonth, count: 1 });
+                            }
+                        } else {
+                            // 新規所属の場合、新しいエントリを作成
+                            totalOrg.push({
+                                code: orgCode,
+                                name: orgName,
+                                datas: [{ month: fiscalMonth, count: 1 }],
+                            });
+                        }
+                    });
+                    STATE.listTotal = { staff: totalStaff, org: totalOrg };
+
+                    // 完了メッセージ
+                    Swal.close();
                     Swal.fire({
-                        title: '更新データなし',
-                        text: '顧客カルテに適用する更新データがありません。',
-                        icon: 'info',
-                        confirmButtonText: '閉じる',
+                        toast: true,
+                        position: 'top',
+                        icon: 'success',
+                        title: '顧客カルテに適用しました',
+                        timer: 3000,
+                        timerProgressBar: true,
+                        showConfirmButton: false,
                     });
-                    return;
-                }
-
-                // レコード更新
-                // 顧客カルテ更新
-                let ref = null;
-                try {
-                    ref = await updateRecords(updateData, utils.constants.CUSTOMER_APP_ID);
-                } catch (error) {
-                    console.error('顧客カルテの適用に失敗しました。', error.error);
-                    //error.error.headers['x-cybozu-error']
-                    const headerCode = error.error?.headers?.['x-cybozu-error'];
-                    if (headerCode === 'GAIA_BR01') {
-                        Swal.fire({
-                            title: '顧客カルテの適用失敗',
-                            html: '<div>他のユーザが編集した可能性があります。<br>最新の内容を再表示後、再度適用を試みてください。</div>',
-                            icon: 'warning',
-                            confirmButtonText: '閉じる',
-                        });
-                    } else {
-                        Swal.fire({
-                            title: '顧客カルテの適用失敗',
-                            text: '顧客カルテの更新に失敗しました。',
-                            icon: 'error',
-                            confirmButtonText: '閉じる',
-                        });
-                    }
-
-                    // 更新に失敗した場合、データを戻す
-                    STATE.listData.datas = datas;
-                    return;
-                }
-
-                // パターン更新
-                try {
-                    const save = await savePattern(item, updatedAt);
-                } catch (error) {
-                    console.error('パターン更新に失敗しました。', error.error);
-                    //error.error.headers['x-cybozu-error']
-                    const headerCode = error.error?.headers?.['x-cybozu-error'];
-                    if (headerCode === 'GAIA_BR01') {
-                        Swal.fire({
-                            title: 'パターンの更新失敗',
-                            html: '<div>他のユーザが編集した可能性があります。<br>最新の内容を再表示後、再度適用を試みてください。</div>',
-                            icon: 'warning',
-                            confirmButtonText: '閉じる',
-                        });
-                    } else {
-                        Swal.fire({
-                            title: 'パターンの更新失敗',
-                            text: 'パターンの更新に失敗しました。',
-                            icon: 'error',
-                            confirmButtonText: '閉じる',
-                        });
-                    }
-
-                    // 更新に失敗しても、顧客カルテは更新されているので、データは戻さない
-                    //STATE.listData.datas = datas;
-                    //return;
-                }
-
-                // 表示データを更新
-                const updatedArrays = ref.records.reduce((acc, r) => {
-                    return acc.map((data) => {
-                        if (data.datas[EXCEPT_ITEMS[0]] === r.id) {
-                            return {
-                                ...data,
-                                datas: {
-                                    ...data.datas,
-                                    [EXCEPT_ITEMS[1]]: r.revision,
-                                    [PATTERN_NAME_ITEMS[1].cd]: data.datas[staffCode[0]], // 担当者コード
-                                    [PATTERN_NAME_ITEMS[2].cd]: data.datas[staffCode[1]], // 担当者
-                                    [SELECTTYPE_NAME_ITEMS[0].cd]: data.datas[staffCode[2]], // 担当者コード名
-
-                                    [PATTERN_NAME_ITEMS[7].cd]: data.datas[departmentCode[0]], // 担当者所属コード
-                                    [PATTERN_NAME_ITEMS[8].cd]: data.datas[departmentCode[1]], // 担当者所属
-                                    [SELECTTYPE_NAME_ITEMS[3].cd]: data.datas[departmentCode[2]], // 担当者所属コード名
-
-                                    [PATTERN_NAME_ITEMS[3].cd]: data.datas[subStaffCode[0]], // 副担当者コード
-                                    [PATTERN_NAME_ITEMS[4].cd]: data.datas[subStaffCode[1]], // 副担当者
-                                    [SELECTTYPE_NAME_ITEMS[1].cd]: data.datas[subStaffCode[2]], // 副担当者コード名
-
-                                    [PATTERN_NAME_ITEMS[9].cd]: data.datas[subDepartmentCode[0]], // 副担当者所属コード
-                                    [PATTERN_NAME_ITEMS[10].cd]: data.datas[subDepartmentCode[1]], // 副担当者所属
-                                    [SELECTTYPE_NAME_ITEMS[4].cd]: data.datas[subDepartmentCode[2]], // 副担当者所属コード名
-                                },
-                            };
-                        } else {
-                            return data;
-                        }
-                    });
-                }, STATE.listData.datas);
-
-                STATE.listData.datas = updatedArrays;
-
-                // 担当者ごとに集計
-                let totalStaff = [];
-                let totalOrg = [];
-                // STATE.listData.datasにある担当者コードごとで決算月ごとにデータの数を集計
-                STATE.listData.datas.forEach((item) => {
-                    const staffCode = item.datas[PATTERN_NAME_ITEMS[1].cd]; // 担当者コード
-                    const staffName = item.datas[PATTERN_NAME_ITEMS[2].cd]; // 担当者名
-                    const orgCode = item.datas[PATTERN_NAME_ITEMS[7].cd]; // 担当者所属コード
-                    const orgName = item.datas[PATTERN_NAME_ITEMS[8].cd]; // 担当者所属名
-                    const fiscalMonth = parseInt(item.datas[CUSTOMERCHART_FIELD.fiscalMonth.cd]) || 0; // 決算月
-
-                    // 既存の担当者データを検索
-                    let matchStaff = totalStaff.find((data) => data.code === staffCode);
-                    let matchOrg = totalOrg.find((data) => data.code === orgCode);
-
-                    if (matchStaff) {
-                        // 既存担当者の場合、該当月のカウントを増やす
-                        let monthData = matchStaff.datas.find((d) => d.month === fiscalMonth);
-                        if (monthData) {
-                            monthData.count++;
-                        } else {
-                            matchStaff.datas.push({ month: fiscalMonth, count: 1 });
-                        }
-                    } else {
-                        // 新規担当者の場合、新しいエントリを作成
-                        totalStaff.push({
-                            code: staffCode,
-                            name: staffName,
-                            datas: [{ month: fiscalMonth, count: 1 }],
-                        });
-                    }
-
-                    // 所属ごとに集計
-                    if (matchOrg) {
-                        // 既存所属の場合、該当月のカウントを増やす
-                        let monthData = matchOrg.datas.find((d) => d.month === fiscalMonth);
-                        if (monthData) {
-                            monthData.count++;
-                        } else {
-                            matchOrg.datas.push({ month: fiscalMonth, count: 1 });
-                        }
-                    } else {
-                        // 新規所属の場合、新しいエントリを作成
-                        totalOrg.push({
-                            code: orgCode,
-                            name: orgName,
-                            datas: [{ month: fiscalMonth, count: 1 }],
-                        });
-                    }
-                });
-                STATE.listTotal = { staff: totalStaff, org: totalOrg };
+                };
             };
 
             /**
-             * パターン保存
+             * 呼び出し元からパターン保存を分岐
              * @param {object} item パターンオブジェクト
              * @param {string} updatedAt 更新日時
+             * @param {string} executor 更新者
+             * @param {number} mode 0:新規パターン保存　1:顧客カルテに適用時のパターン更新
              */
-            const savePattern = async (item, updatedAt) => {
-                //const item.index;
-                const staff = ['新' + PATTERN_NAME_ITEMS[1].cd + item.index, '新' + PATTERN_NAME_ITEMS[2].cd + item.index];
-                const subStaff = ['新' + PATTERN_NAME_ITEMS[3].cd + item.index, '新' + PATTERN_NAME_ITEMS[4].cd + item.index];
-                const department = ['新' + PATTERN_NAME_ITEMS[7].cd + item.index, '新' + PATTERN_NAME_ITEMS[8].cd + item.index];
-                const subDepartment = ['新' + PATTERN_NAME_ITEMS[9].cd + item.index, '新' + PATTERN_NAME_ITEMS[10].cd + item.index];
+            const savePattern = async (item, updatedAt, executor, mode) => {
+                // パターン保存
+                const executePatternSave = async () => {
+                    //const item.index;
+                    const staff = ['新' + PATTERN_NAME_ITEMS[1].cd + item.index, '新' + PATTERN_NAME_ITEMS[2].cd + item.index];
+                    const subStaff = ['新' + PATTERN_NAME_ITEMS[3].cd + item.index, '新' + PATTERN_NAME_ITEMS[4].cd + item.index];
+                    const department = ['新' + PATTERN_NAME_ITEMS[7].cd + item.index, '新' + PATTERN_NAME_ITEMS[8].cd + item.index];
+                    const subDepartment = ['新' + PATTERN_NAME_ITEMS[9].cd + item.index, '新' + PATTERN_NAME_ITEMS[10].cd + item.index];
 
-                // バックアップ用
-                const backupStaff = [
-                    PATTERN_NAME_ITEMS[1].cd + '_OLD', // 担当者コード
-                    PATTERN_NAME_ITEMS[2].cd + '_OLD', // 担当者名
-                    PATTERN_NAME_ITEMS[7].cd + '_OLD', // 担当者所属コード
-                    PATTERN_NAME_ITEMS[8].cd + '_OLD', // 担当者所属名
-                ];
-                const backupSubStaff = [
-                    PATTERN_NAME_ITEMS[3].cd + '_OLD', // 副担当者コード
-                    PATTERN_NAME_ITEMS[4].cd + '_OLD', // 副担当者名
-                    PATTERN_NAME_ITEMS[9].cd + '_OLD', // 副担当者所属コード
-                    PATTERN_NAME_ITEMS[10].cd + '_OLD', // 副担当者所属名
-                ];
+                    // JSONに変換
+                    const filtered = STATE.listData.datas.map((item) => {
+                        const result = {
+                            [PATTERN_NAME_ITEMS[0].cd]: item.datas[PATTERN_NAME_ITEMS[0].cd], // $id
 
-                // JSONに変換
-                const filtered = STATE.listData.datas.map((item) => {
-                    const result = {
-                        [PATTERN_NAME_ITEMS[0].cd]: item.datas[PATTERN_NAME_ITEMS[0].cd], // $id
+                            [PATTERN_NAME_ITEMS[1].cd]: item.datas[staff[0]], // 担当者
+                            [PATTERN_NAME_ITEMS[2].cd]: item.datas[staff[1]],
+                            [PATTERN_NAME_ITEMS[3].cd]: item.datas[subStaff[0]], // 副担当者
+                            [PATTERN_NAME_ITEMS[4].cd]: item.datas[subStaff[1]],
 
-                        [PATTERN_NAME_ITEMS[1].cd]: item.datas[staff[0]], // 担当者
-                        [PATTERN_NAME_ITEMS[2].cd]: item.datas[staff[1]],
-                        [PATTERN_NAME_ITEMS[3].cd]: item.datas[subStaff[0]], // 副担当者
-                        [PATTERN_NAME_ITEMS[4].cd]: item.datas[subStaff[1]],
+                            [PATTERN_NAME_ITEMS[7].cd]: item.datas[department[0]], // 担当者所属
+                            [PATTERN_NAME_ITEMS[8].cd]: item.datas[department[1]],
+                            [PATTERN_NAME_ITEMS[9].cd]: item.datas[subDepartment[0]], // 副担当者所属
+                            [PATTERN_NAME_ITEMS[10].cd]: item.datas[subDepartment[1]],
+                        };
 
-                        [PATTERN_NAME_ITEMS[7].cd]: item.datas[department[0]], // 担当者所属
-                        [PATTERN_NAME_ITEMS[8].cd]: item.datas[department[1]],
-                        [PATTERN_NAME_ITEMS[9].cd]: item.datas[subDepartment[0]], // 副担当者所属
-                        [PATTERN_NAME_ITEMS[10].cd]: item.datas[subDepartment[1]],
+                        // バックアップ用フィールドを追加
+                        // もともとバックアップ用フィールドがあればその値を、なければnullをセット（未設定は空欄にしたいため）
+                        if (result.OLD) {
+                        } else {
+                            result.OLD = {};
+                        }
+                        if (item.datas.OLD) {
+                            result.OLD[PATTERN_NAME_ITEMS[1].cd] = utils.common.containsKey(item.datas.OLD, PATTERN_NAME_ITEMS[1].cd) ? item.datas.OLD[PATTERN_NAME_ITEMS[1].cd] : null; // 担当者コード
+                            result.OLD[PATTERN_NAME_ITEMS[2].cd] = utils.common.containsKey(item.datas.OLD, PATTERN_NAME_ITEMS[2].cd) ? item.datas.OLD[PATTERN_NAME_ITEMS[2].cd] : null; // 担当者名
+                            result.OLD[PATTERN_NAME_ITEMS[3].cd] = utils.common.containsKey(item.datas.OLD, PATTERN_NAME_ITEMS[3].cd) ? item.datas.OLD[PATTERN_NAME_ITEMS[3].cd] : null; // 担当者所属コード
+                            result.OLD[PATTERN_NAME_ITEMS[4].cd] = utils.common.containsKey(item.datas.OLD, PATTERN_NAME_ITEMS[4].cd) ? item.datas.OLD[PATTERN_NAME_ITEMS[4].cd] : null; // 担当者所属名
+
+                            result.OLD[PATTERN_NAME_ITEMS[7].cd] = utils.common.containsKey(item.datas.OLD, PATTERN_NAME_ITEMS[7].cd) ? item.datas.OLD[PATTERN_NAME_ITEMS[7].cd] : null; // 副担当者コード
+                            result.OLD[PATTERN_NAME_ITEMS[8].cd] = utils.common.containsKey(item.datas.OLD, PATTERN_NAME_ITEMS[8].cd) ? item.datas.OLD[PATTERN_NAME_ITEMS[8].cd] : null; // 副担当者名
+                            result.OLD[PATTERN_NAME_ITEMS[9].cd] = utils.common.containsKey(item.datas.OLD, PATTERN_NAME_ITEMS[9].cd) ? item.datas.OLD[PATTERN_NAME_ITEMS[9].cd] : null; // 副担当者所属コード
+                            result.OLD[PATTERN_NAME_ITEMS[10].cd] = utils.common.containsKey(item.datas.OLD, PATTERN_NAME_ITEMS[10].cd) ? item.datas.OLD[PATTERN_NAME_ITEMS[10].cd] : null; // 副担当者所属名
+                        } else {
+                            result.OLD[PATTERN_NAME_ITEMS[1].cd] = null; // 担当者コード
+                            result.OLD[PATTERN_NAME_ITEMS[2].cd] = null;
+                            result.OLD[PATTERN_NAME_ITEMS[3].cd] = null;
+                            result.OLD[PATTERN_NAME_ITEMS[4].cd] = null;
+                            result.OLD[PATTERN_NAME_ITEMS[7].cd] = null;
+                            result.OLD[PATTERN_NAME_ITEMS[8].cd] = null;
+                            result.OLD[PATTERN_NAME_ITEMS[9].cd] = null;
+                            result.OLD[PATTERN_NAME_ITEMS[10].cd] = null;
+                        }
+
+                        return result;
+                    });
+                    const json = JSON.stringify(filtered, null, 2);
+                    const id = item.id;
+                    //const id = 1000; // レコードID（テスト用）
+                    const revision = item.revision;
+                    const name = item.name;
+                    //console.log('JSON:', json);
+                    // レコード更新
+                    const updateData = {
+                        [STAFF_CHANGE_FIELDCD.id.writeCd]: id,
+                        [STAFF_CHANGE_FIELDCD.revision.writeCd]: revision,
+                        record: {
+                            [STAFF_CHANGE_FIELDCD.jsonData.cd]: { value: json },
+                            [STAFF_CHANGE_FIELDCD.patternName.cd]: { value: name },
+                            [STAFF_CHANGE_FIELDCD.appliedDate.cd]: { value: updatedAt },
+                            [STAFF_CHANGE_FIELDCD.executor.cd]: { value: executor },
+                        },
                     };
 
-                    // バックアップ用フィールドを追加
-                    // もともとバックアップ用フィールドがあればその値を、なければnullをセット（未設定は空欄にしたいため）
-                    result[backupStaff[0]] = utils.common.containsKey(item.datas, backupStaff[0]) ? item.datas[backupStaff[0]] : null; // 担当者コード
-                    result[backupStaff[1]] = utils.common.containsKey(item.datas, backupStaff[1]) ? item.datas[backupStaff[1]] : null; // 担当者名
-                    result[backupStaff[2]] = utils.common.containsKey(item.datas, backupStaff[2]) ? item.datas[backupStaff[2]] : null; // 担当者所属コード
-                    result[backupStaff[3]] = utils.common.containsKey(item.datas, backupStaff[3]) ? item.datas[backupStaff[3]] : null; // 担当者所属名
-                    result[backupSubStaff[0]] = utils.common.containsKey(item.datas, backupSubStaff[0]) ? item.datas[backupSubStaff[0]] : null; // 副担当者コード
-                    result[backupSubStaff[1]] = utils.common.containsKey(item.datas, backupSubStaff[1]) ? item.datas[backupSubStaff[1]] : null; // 副担当者名
-                    result[backupSubStaff[2]] = utils.common.containsKey(item.datas, backupSubStaff[2]) ? item.datas[backupSubStaff[2]] : null; // 副担当者所属コード
-                    result[backupSubStaff[3]] = utils.common.containsKey(item.datas, backupSubStaff[3]) ? item.datas[backupSubStaff[3]] : null; // 副担当者所属名
-                    //result['更新日時'] = utils.common.containsKey(item.datas, '更新日時') ? item.datas['更新日時'] : null; // 更新日時
+                    try {
+                        const ref = await updateRecords([updateData], utils.constants.THIS_APP_ID);
+                        if (ref && ref.records.length > 0) {
+                            // STATEのパターン名のrevisionを更新
+                            const idx = STATE.patternNames.names.findIndex((p) => p.id === id);
+                            if (idx !== -1) {
+                                STATE.patternNames.names[idx].revision = ref.records[0].revision;
+                            }
 
-                    return result;
-                });
-                const json = JSON.stringify(filtered, null, 2);
-                const id = item.id;
-                const revision = item.revision;
-                const name = item.name;
-                //console.log('JSON:', json);
-                // レコード更新
-                const updateData = {
-                    [STAFF_CHANGE_FIELDCD.id.writeCd]: id,
-                    [STAFF_CHANGE_FIELDCD.revision.writeCd]: revision,
-                    record: {
-                        [STAFF_CHANGE_FIELDCD.jsonData.cd]: { value: json },
-                        [STAFF_CHANGE_FIELDCD.patternName.cd]: { value: name },
-                        [STAFF_CHANGE_FIELDCD.appliedDate.cd]: { value: updatedAt },
-                    },
+                            if (mode === 0) {
+                                // 完了メッセージ
+                                Swal.close();
+                                Swal.fire({
+                                    toast: true,
+                                    position: 'top',
+                                    icon: 'success',
+                                    title: 'パターンを保存しました。',
+                                    timer: 3000,
+                                    timerProgressBar: true,
+                                    showConfirmButton: false,
+                                });
+                            }
+
+                            return ref;
+                        }
+                        return null;
+                    } catch (error) {
+                        console.error('パターン保存に失敗しました。', error.error);
+                        if (mode === 0) {
+                            //error.error.headers['x-cybozu-error']
+                            //const headerCode = error.error?.headers?.['x-cybozu-error'];
+                            const errorCode = error.error?.code;
+                            if (errorCode === 'GAIA_CO02') {
+                                Swal.hideLoading();
+                                Swal.update({
+                                    title: 'パターン保存失敗',
+                                    html: '<div>他のユーザが編集した可能性があります。<br>最新の内容を再表示後、再度適用を試みてください。</div>',
+                                    icon: 'warning',
+                                    confirmButtonText: '閉じる',
+                                });
+                            } else {
+                                Swal.hideLoading();
+                                Swal.update({
+                                    title: 'パターン保存失敗',
+                                    text: 'パターン保存に失敗しました。',
+                                    icon: 'error',
+                                    confirmButtonText: '閉じる',
+                                });
+                            }
+                            return null;
+                        } else {
+                            // 顧客カルテに適用からのパターン更新は、完了メッセージは表示しない
+                            throw error;
+                        }
+                    }
                 };
 
-                try {
-                    const ref = await updateRecords([updateData], utils.constants.THIS_APP_ID);
-                    if (ref && ref.records.length > 0) {
-                        // STATEのパターン名のrevisionを更新
-                        const idx = STATE.patternNames.names.findIndex((p) => p.id === id);
-                        if (idx !== -1) {
-                            STATE.patternNames.names[idx].revision = ref.records[0].revision;
-                        }
-                        return ref;
-                    }
-                } catch (error) {
-                    console.error('パターン保存に失敗しました。', error.error);
-                    //error.error.headers['x-cybozu-error']
-                    const headerCode = error.error?.headers?.['x-cybozu-error'];
-                    if (headerCode === 'GAIA_BR01') {
-                        Swal.fire({
-                            title: 'パターン保存失敗',
-                            html: '<div>他のユーザが編集した可能性があります。<br>最新の内容を再表示後、再度適用を試みてください。</div>',
-                            icon: 'warning',
-                            confirmButtonText: '閉じる',
-                        });
-                    } else {
-                        Swal.fire({
-                            title: 'パターン保存失敗',
-                            text: 'パターン保存に失敗しました。',
-                            icon: 'error',
-                            confirmButtonText: '閉じる',
-                        });
-                    }
-                    return null;
+                // メッセージを表示
+                if (mode === 0) {
+                    Swal.fire({
+                        title: 'パターン保存中...',
+                        allowOutsideClick: false, // ポップアップの外をクリックしても、画面を閉じない
+                        didOpen: async () => {
+                            Swal.showLoading();
+                            await executePatternSave();
+                        },
+                    });
+                } else {
+                    // 顧客カルテに適用からのパターン更新
+                    const result = await executePatternSave();
+                    //await test();
+                    return result;
                 }
             };
 
@@ -1459,7 +1545,8 @@
                                 item.datas[fields.patternStaff[3]] = s[STAFFMASTER_FIELD.organization.cd] && s[STAFFMASTER_FIELD.organization.cd].length > 0 ? s[STAFFMASTER_FIELD.organization.cd][0].name : '';
                             });
                         item.datas[fields.patternStaff[4]] = '[' + item.datas[fields.patternStaff[0]] + ']' + item.datas[fields.patternStaff[1]];
-                        item.datas[fields.patternStaff[5]] = '[' + item.datas[fields.patternStaff[2]] + ']' + item.datas[fields.patternStaff[3]];
+                        //item.datas[fields.patternStaff[5]] = '[' + item.datas[fields.patternStaff[2]] + ']' + item.datas[fields.patternStaff[3]];
+                        item.datas[fields.patternStaff[5]] = item.datas[fields.patternStaff[3]];
                         item.datas[fields.patternStaff[4] + '_vmodel'] = item.datas[fields.patternStaff[4]];
                     }
                     // 副担当者
@@ -1475,7 +1562,8 @@
                                 item.datas[fields.patternSubStaff[3]] = s[STAFFMASTER_FIELD.organization.cd] && s[STAFFMASTER_FIELD.organization.cd].length > 0 ? s[STAFFMASTER_FIELD.organization.cd][0].name : '';
                             });
                         item.datas[fields.patternSubStaff[4]] = '[' + item.datas[fields.patternSubStaff[0]] + ']' + item.datas[fields.patternSubStaff[1]];
-                        item.datas[fields.patternSubStaff[5]] = '[' + item.datas[fields.patternSubStaff[2]] + ']' + item.datas[fields.patternSubStaff[3]];
+                        //item.datas[fields.patternSubStaff[5]] = '[' + item.datas[fields.patternSubStaff[2]] + ']' + item.datas[fields.patternSubStaff[3]];
+                        item.datas[fields.patternSubStaff[5]] = item.datas[fields.patternSubStaff[3]];
                         item.datas[fields.patternSubStaff[4] + '_vmodel'] = item.datas[fields.patternSubStaff[4]];
                     }
                 });
@@ -1889,7 +1977,8 @@
                         const relativeIndex = rowsInTbody.indexOf(row);
 
                         STATE.listDataPattern.clickNo = relativeIndex;
-                        STATE.listDataPattern.clickName = row.textContent;
+                        //STATE.listDataPattern.clickName = row.textContent;
+                        STATE.listDataPattern.clickName = row.cells[0]?.textContent?.trim() ?? ''; // 1列目のパターン名
 
                         // クリックされた行のパターン名をSwalのinputにセット
                         Swal.getPopup().querySelector('#clickName').value = STATE.listDataPattern.clickName;
@@ -2305,7 +2394,8 @@
                 if (code !== '') {
                     const staff = STATE.selectStaffs.find((staff) => staff[STAFFMASTER_FIELD.staffCode.cd] === code);
                     const orgs = staff[STAFFMASTER_FIELD.organization.cd];
-                    STATE.listData.datas[index].datas[org] = '[' + orgs.at(CONF.radOrg).code + ']' + orgs.at(CONF.radOrg).name;
+                    //STATE.listData.datas[index].datas[org] = '[' + orgs.at(CONF.radOrg).code + ']' + orgs.at(CONF.radOrg).name;
+                    STATE.listData.datas[index].datas[org] = orgs.at(CONF.radOrg).name;
                     STATE.listData.datas[index].datas[orgCd] = orgs.at(CONF.radOrg).code;
                     STATE.listData.datas[index].datas[orgNm] = orgs.at(CONF.radOrg).name;
                 } else {
@@ -2383,6 +2473,22 @@
                     }
                 }
                 return { cd: cd, nm: nm };
+            };
+
+            /**
+             * URLを生成する
+             * @param {Number} id
+             */
+            const generateHref = (id) => {
+                //const appId = bizupUtil.constants.CUSTOMER_APP_ID; // メインアプリのアプリID
+                //let url = '/k/' + appId + '/show#record=' + id; // アプリIDは固定
+                //let rc = '';
+
+                // URLを生成する
+                //rc = encodeURI('/k/85/show#record=' + id);
+                //rc = encodeURI(url);
+
+                return bizupUtil.common.generateHref(bizupUtil.constants.CUSTOMER_APP_ID, id);
             };
 
             onMounted(async () => {
@@ -2782,6 +2888,7 @@
                 totalCustomersPerStaff,
                 totalCustomersPer,
                 totalStaff,
+                generateHref,
             };
         },
         template: /* HTML */ `
@@ -2792,8 +2899,8 @@
                     <li>現在と表示中パターンの担当者の顧客数・所属組織の顧客数※複数組織に所属している場合は要検討</li>
                     <li>適用した際は必ず適用日時と適用前のバックアップを取得・JSONに保存</li>
                 </ul>
-                <button @click="addPattern" class="bz_bt_def">パターン追加</button>
-                <button @click="openPattern" class="bz_bt_def">パターン開く</button>
+                <button @click="addPattern" class="bz_bt_def">新規パターン追加</button>
+                <button @click="openPattern" class="bz_bt_def">パターを開く</button>
                 <button @click="totalCustomersPer(0)" class="bz_bt_def">担当者集計</button>
                 <button @click="totalCustomersPer(1)" class="bz_bt_def">所属集計</button>
             </div>
@@ -2842,7 +2949,14 @@
                                                 <option value="">未設定</option>
                                             </select>
                                         </template>
-                                        <template v-else> {{field.datas[key.code]}} </template>
+                                        <template v-else>
+                                            <template v-if="key.code==='顧客コード名'">
+                                                <span :title="'顧客コード名'">
+                                                    <a class="no-color-change underline cursor-pointer" :href="generateHref(field.datas.$id)" target="_blank"> {{field.datas[key.code]}} </a>
+                                                </span>
+                                            </template>
+                                            <template v-else> {{field.datas[key.code]}} </template>
+                                        </template>
                                     </td>
                                 </template>
                             </tr>

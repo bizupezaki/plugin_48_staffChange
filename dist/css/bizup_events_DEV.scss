@@ -46,6 +46,14 @@
             border-top-style: none;
             border-left-style: none;
             white-space: nowrap;
+
+            a.no-color-change {
+                color: inherit;
+            }
+        
+            a.underline {
+                text-decoration: underline;
+            }
         }
 
         tr {
