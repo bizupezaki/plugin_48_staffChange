@@ -72,16 +72,19 @@
     // パターン追加テーブル
     const setPattern = {
         props: ['pattern', 'colspan'],
-        emits: ['savePattern', 'replaceAllPattern', 'applyCustomerChartPattern', 'showBackupPattern'],
+        emits: ['savePattern', 'replaceAllPattern', 'applyCustomerChartPattern', 'showBackupPattern', 'restoreBackupPattern'],
         template: `
             <tr v-if="pattern && pattern.length!==0">
                 <th :colspan="colspan"></th>
-                <th v-for="(item,index) in pattern" :key="index" colspan="4" :style="{ backgroundColor: item.titleColor }">
+                <th v-for="(item,index) in pattern" :key="index" :colspan="item.colspan" :style="{ backgroundColor: item.titleColor }">
                         {{item.name}} 
                         <button @click="replaceAll(item)" class="bz_bt_def">担当者一括置換</button>
                         <button @click="save(item)" class="bz_bt_def">この設定を保存</button>
                         <button @click="apply(item)" class="bz_bt_def">顧客カルテに適用</button>
                         <button @click="showBackup(item)" class="bz_bt_def">バックアップ表示</button>
+                        <template v-if="item.backupDispFlg">
+                            <button @click="restoreBackup(item)" class="bz_bt_def">バックアップを復元</button>
+                        </template>
                 </th>
             </tr>
         `,
@@ -97,6 +100,9 @@
             },
             showBackup(item) {
                 this.$emit('showBackupPattern', item);
+            },
+            restoreBackup(item) {
+                this.$emit('restoreBackupPattern', item);
             },
         },
     };
@@ -156,7 +162,7 @@
                 ],
                 listData: {},
                 listDataPattern: { clickNo: null, datas: [], clickName: '' },
-                patternNames: { len: 0, noNow: 0, maxlength: MAX_PATTERN, names: [] },
+                patternNames: { len: 0, maxlength: MAX_PATTERN, names: [] },
                 selectStaffs: [], // 担当者マスタの全データ
                 testSelectedStaff: null, // v-select用
                 //selectedStaff: null,    // 使用していないのか？
@@ -601,6 +607,8 @@
                     //revision: ref.records[0].revision,
                     titleColor: PATTERN_TITLE_COLOR[cnt - 1],
                     itemsColor: PATTERN_ITEMS_COLOR[cnt - 1],
+                    backupDispFlg: false,
+                    colspan: 4, // 項目数
                 });
 
                 // アイテムカラーを追加
@@ -792,40 +800,38 @@
                         };
 
                         // バックアップ表示
-                        /*if (matched['OLD']) {
-                            console.log('OLD');
-                            updatedItem.datas['OLD'] = {
-                                ...updatedItem.datas['OLD'],
-                                index: cnt,
-                                datas: {
-                                    [PATTERN_NAME_ITEMS[1].cd]: matched['OLD'][PATTERN_NAME_ITEMS[1].cd],
-                                    [PATTERN_NAME_ITEMS[2].cd]: matched['OLD'][PATTERN_NAME_ITEMS[2].cd],
-                                    [PATTERN_NAME_ITEMS[3].cd]: matched['OLD'][PATTERN_NAME_ITEMS[3].cd],
-                                    [PATTERN_NAME_ITEMS[4].cd]: matched['OLD'][PATTERN_NAME_ITEMS[4].cd],
-                                    [PATTERN_NAME_ITEMS[7].cd]: matched['OLD'][PATTERN_NAME_ITEMS[7].cd],
-                                    [PATTERN_NAME_ITEMS[8].cd]: matched['OLD'][PATTERN_NAME_ITEMS[8].cd],
-                                    [PATTERN_NAME_ITEMS[9].cd]: matched['OLD'][PATTERN_NAME_ITEMS[9].cd],
-                                    [PATTERN_NAME_ITEMS[10].cd]: matched['OLD'][PATTERN_NAME_ITEMS[10].cd],
-                                    [SELECTTYPE_NAME_ITEMS[0].cd]: '[' + matched['OLD'][PATTERN_NAME_ITEMS[1].cd] + ']' + matched['OLD'][PATTERN_NAME_ITEMS[2].cd],
-                                    [SELECTTYPE_NAME_ITEMS[1].cd]: '[' + matched['OLD'][PATTERN_NAME_ITEMS[3].cd] + ']' + matched['OLD'][PATTERN_NAME_ITEMS[4].cd],
-                                },
+                        if (matched['OLD']) {
+                            //console.log('OLD');
+                            updatedItem.datas['pattern'][cnt - 1]['OLD'] = {
+                                ...updatedItem.datas['pattern'][cnt - 1]['OLD'],
+                                [PATTERN_NAME_ITEMS[1].cd]: matched['OLD'][PATTERN_NAME_ITEMS[1].cd],
+                                [PATTERN_NAME_ITEMS[2].cd]: matched['OLD'][PATTERN_NAME_ITEMS[2].cd],
+                                [PATTERN_NAME_ITEMS[3].cd]: matched['OLD'][PATTERN_NAME_ITEMS[3].cd],
+                                [PATTERN_NAME_ITEMS[4].cd]: matched['OLD'][PATTERN_NAME_ITEMS[4].cd],
+                                [PATTERN_NAME_ITEMS[7].cd]: matched['OLD'][PATTERN_NAME_ITEMS[7].cd],
+                                [PATTERN_NAME_ITEMS[8].cd]: matched['OLD'][PATTERN_NAME_ITEMS[8].cd],
+                                [PATTERN_NAME_ITEMS[9].cd]: matched['OLD'][PATTERN_NAME_ITEMS[9].cd],
+                                [PATTERN_NAME_ITEMS[10].cd]: matched['OLD'][PATTERN_NAME_ITEMS[10].cd],
+                                [SELECTTYPE_NAME_ITEMS[0].cd]: matched['OLD'][PATTERN_NAME_ITEMS[1].cd] ? '[' + matched['OLD'][PATTERN_NAME_ITEMS[1].cd] + ']' + matched['OLD'][PATTERN_NAME_ITEMS[2].cd] : '',
+                                [SELECTTYPE_NAME_ITEMS[1].cd]: matched['OLD'][PATTERN_NAME_ITEMS[3].cd] ? '[' + matched['OLD'][PATTERN_NAME_ITEMS[3].cd] + ']' + matched['OLD'][PATTERN_NAME_ITEMS[4].cd] : '',
+                                [SELECTTYPE_NAME_ITEMS[3].cd]: matched['OLD'][PATTERN_NAME_ITEMS[8].cd] ? matched['OLD'][PATTERN_NAME_ITEMS[8].cd] : '',
+                                [SELECTTYPE_NAME_ITEMS[4].cd]: matched['OLD'][PATTERN_NAME_ITEMS[10].cd] ? matched['OLD'][PATTERN_NAME_ITEMS[10].cd] : '',
                             };
                         } else {
-                            console.log('no OLD');
-
-                            updatedItem.datas['OLD'] = {
-                                [PATTERN_NAME_ITEMS[1]]: matched['OLD'][PATTERN_NAME_ITEMS[1]],
-                                [PATTERN_NAME_ITEMS[2]]: matched['OLD'][PATTERN_NAME_ITEMS[2]],
-                                [PATTERN_NAME_ITEMS[3]]: matched['OLD'][PATTERN_NAME_ITEMS[3]],
-                                [PATTERN_NAME_ITEMS[4]]: matched['OLD'][PATTERN_NAME_ITEMS[4]],
-                                [PATTERN_NAME_ITEMS[7]]: matched['OLD'][PATTERN_NAME_ITEMS[7]],
-                                [PATTERN_NAME_ITEMS[8]]: matched['OLD'][PATTERN_NAME_ITEMS[8]],
-                                [PATTERN_NAME_ITEMS[9]]: matched['OLD'][PATTERN_NAME_ITEMS[9]],
-                                [PATTERN_NAME_ITEMS[10]]: matched['OLD'][PATTERN_NAME_ITEMS[10]],
-                                [SELECTTYPE_NAME_ITEMS[0]]: '[' + matched['OLD'][PATTERN_NAME_ITEMS[1]] + ']' + matched['OLD'][PATTERN_NAME_ITEMS[2]],
-                                [SELECTTYPE_NAME_ITEMS[1]]: '[' + matched['OLD'][PATTERN_NAME_ITEMS[3]] + ']' + matched['OLD'][PATTERN_NAME_ITEMS[4]],
-                            };
-                        }*/
+                            //console.log('no OLD');
+                            /*updatedItem.datas['OLD'] = {
+                                [PATTERN_NAME_ITEMS[1].cd]: matched['OLD'][PATTERN_NAME_ITEMS[1].cd],
+                                [PATTERN_NAME_ITEMS[2].cd]: matched['OLD'][PATTERN_NAME_ITEMS[2].cd],
+                                [PATTERN_NAME_ITEMS[3].cd]: matched['OLD'][PATTERN_NAME_ITEMS[3].cd],
+                                [PATTERN_NAME_ITEMS[4].cd]: matched['OLD'][PATTERN_NAME_ITEMS[4].cd],
+                                [PATTERN_NAME_ITEMS[7].cd]: matched['OLD'][PATTERN_NAME_ITEMS[7].cd],
+                                [PATTERN_NAME_ITEMS[8].cd]: matched['OLD'][PATTERN_NAME_ITEMS[8].cd],
+                                [PATTERN_NAME_ITEMS[9].cd]: matched['OLD'][PATTERN_NAME_ITEMS[9].cd],
+                                [PATTERN_NAME_ITEMS[10].cd]: matched['OLD'][PATTERN_NAME_ITEMS[10].cd],
+                                [SELECTTYPE_NAME_ITEMS[0].cd]: '[' + matched['OLD'][PATTERN_NAME_ITEMS[1].cd] + ']' + matched['OLD'][PATTERN_NAME_ITEMS[2].cd],
+                                [SELECTTYPE_NAME_ITEMS[1].cd]: '[' + matched['OLD'][PATTERN_NAME_ITEMS[3].cd] + ']' + matched['OLD'][PATTERN_NAME_ITEMS[4].cd],
+                            };*/
+                        }
 
                         acc.push(updatedItem);
                         return acc;
@@ -840,7 +846,8 @@
                         revision: STATE.listDataPattern.datas[STATE.listDataPattern.clickNo].revision,
                         titleColor: PATTERN_TITLE_COLOR[cnt - 1],
                         itemsColor: PATTERN_ITEMS_COLOR[cnt - 1], // アイテムカラーを追加
-                        backupFlg: true,
+                        backupDispFlg: false,
+                        colspan: 4, // 項目数
                     });
                     STATE.patternNames.len = cnt;
 
@@ -857,6 +864,264 @@
                 // stickyヘッダー対応
                 nextTick(() => {
                     bizupUtil.common.setStickyHeaderHeight(CONTAINER_ID, '');
+                });
+            };
+
+            // バックアップ表示
+            const showBackupPattern = async (item) => {
+                const no = item.index - 1; // パターン番号
+
+                // バックアップデータがない場合は何もしない
+                if (!STATE.listData.datas[0].datas['pattern'][no].OLD) {
+                    Swal.fire({
+                        title: 'バックアップデータなし',
+                        text: 'バックアップデータがありません。',
+                        icon: 'warning',
+                        confirmButtonText: '閉じる',
+                    });
+                    return;
+                }
+
+                // すでに表示されている場合は何もしない
+                if (STATE.patternNames.names[no].backupDispFlg) {
+                    return;
+                }
+
+                // パターン表示
+                const staff = [SELECTTYPE_NAME_ITEMS[0].cd, PATTERN_NAME_ITEMS[1].cd, PATTERN_NAME_ITEMS[2].cd];
+                const subStaff = [SELECTTYPE_NAME_ITEMS[1].cd, PATTERN_NAME_ITEMS[3].cd, PATTERN_NAME_ITEMS[4].cd];
+                const department = [SELECTTYPE_NAME_ITEMS[3].cd, PATTERN_NAME_ITEMS[7].cd, PATTERN_NAME_ITEMS[8].cd];
+                const subDepartment = [SELECTTYPE_NAME_ITEMS[4].cd, PATTERN_NAME_ITEMS[9].cd, PATTERN_NAME_ITEMS[10].cd];
+
+                // 項目名設定
+                let newStaff = [];
+                newStaff.push({ code: '旧_' + SELECTTYPE_NAME_ITEMS[0].cd + '_' + item.index, label: SELECTTYPE_NAME_ITEMS[0].label + '（バックアップ）', type: '' });
+                newStaff.push({ code: '旧_' + SELECTTYPE_NAME_ITEMS[3].cd + '_' + item.index, label: SELECTTYPE_NAME_ITEMS[3].label + '（バックアップ）', type: '' });
+                let newStaffsub = [];
+                newStaffsub.push({ code: '旧_' + SELECTTYPE_NAME_ITEMS[1].cd + '_' + item.index, label: SELECTTYPE_NAME_ITEMS[1].label + '（バックアップ）', type: '' });
+                newStaffsub.push({ code: '旧_' + SELECTTYPE_NAME_ITEMS[4].cd + '_' + item.index, label: SELECTTYPE_NAME_ITEMS[4].label + '（バックアップ）', type: '' });
+
+                const indexStaff = STATE.listData.items.findIndex((it) => it.code === '新_' + SELECTTYPE_NAME_ITEMS[3].cd + '_' + item.index);
+                let wkItems = [...STATE.listData.items.slice(0, indexStaff + 1), ...newStaff, ...STATE.listData.items.slice(indexStaff + 1)];
+                const indexStaffsub = wkItems.findIndex((it) => it.code === '新_' + SELECTTYPE_NAME_ITEMS[4].cd + '_' + item.index);
+                wkItems = [...wkItems.slice(0, indexStaffsub + 1), ...newStaffsub, ...wkItems.slice(indexStaffsub + 1)];
+                STATE.listData.items = wkItems;
+
+                // 現役の担当者取得
+                const staffsCode = STATE.selectStaffs.map((s) => s[STAFFMASTER_FIELD.staffCode.cd]);
+
+                // STATE.listData.datasに追加
+                /*const updatedArray = STATE.listData.datas.reduce((acc, item) => {
+                    // JSONデータから該当IDのデータを取得
+                    const matched = clickData.find((data) => data['$id'] === item.datas['$id']);
+                    // 担当者コードと所属名は対になっているはずなので、担当者コードで現役かどうかをチェック
+                    let idxS1 = -1;
+                    let idxS2 = -1;
+                    if (matched) {
+                        idxS1 = staffsCode.indexOf(matched[PATTERN_NAME_ITEMS[1].cd]); // 担当者コード
+                        idxS2 = staffsCode.indexOf(matched[PATTERN_NAME_ITEMS[3].cd]); // 副担当者コード
+                    }
+                    //const idxS1 = staffsCode.indexOf(matched[PATTERN_NAME_ITEMS[1].cd]); // 担当者コード
+                    //const idxS2 = staffsCode.indexOf(matched[PATTERN_NAME_ITEMS[3].cd]); // 副担当者コード
+                    const wk = {
+                        index: cnt,
+                        [staff[0]]: idxS1 !== -1 ? '[' + matched[PATTERN_NAME_ITEMS[1].cd] + ']' + matched[PATTERN_NAME_ITEMS[2].cd] : '', // 担当者
+                        [staff[1]]: idxS1 !== -1 ? matched[PATTERN_NAME_ITEMS[1].cd] : '',
+                        [staff[2]]: idxS1 !== -1 ? matched[PATTERN_NAME_ITEMS[2].cd] : '',
+                        //[wkStaff]: idxS1 !== -1 ? '[' + matched[PATTERN_NAME_ITEMS[1].cd] + ']' + matched[PATTERN_NAME_ITEMS[2].cd] : '', // 選択値保存用
+
+                        [subStaff[0]]: idxS2 !== -1 ? '[' + matched[PATTERN_NAME_ITEMS[3].cd] + ']' + matched[PATTERN_NAME_ITEMS[4].cd] : '', // 副担当者
+                        [subStaff[1]]: idxS2 !== -1 ? matched[PATTERN_NAME_ITEMS[3].cd] : '',
+                        [subStaff[2]]: idxS2 !== -1 ? matched[PATTERN_NAME_ITEMS[4].cd] : '',
+                        //[wkSubStaff]: idxS2 !== -1 ? '[' + matched[PATTERN_NAME_ITEMS[3].cd] + ']' + matched[PATTERN_NAME_ITEMS[4].cd] : '',
+
+                        //[department[0]]: idxS1 !== -1 ? '[' + matched[PATTERN_NAME_ITEMS[7].cd] + ']' + matched[PATTERN_NAME_ITEMS[8].cd] : '', // 担当者所属
+                        [department[0]]: idxS1 !== -1 ? matched[PATTERN_NAME_ITEMS[8].cd] : '', // 担当者所属
+                        [department[1]]: idxS1 !== -1 ? matched[PATTERN_NAME_ITEMS[7].cd] : '',
+                        [department[2]]: idxS1 !== -1 ? matched[PATTERN_NAME_ITEMS[8].cd] : '',
+                        //[wkDepartment]: idxS1 !== -1 ? '[' + matched[PATTERN_NAME_ITEMS[7].cd] + ']' + matched[PATTERN_NAME_ITEMS[8].cd] : '',
+
+                        //[subDepartment[0]]: idxS2 !== -1 ? '[' + matched[PATTERN_NAME_ITEMS[9].cd] + ']' + matched[PATTERN_NAME_ITEMS[10].cd] : '', // 副担当者所属
+                        [subDepartment[0]]: idxS2 !== -1 ? matched[PATTERN_NAME_ITEMS[10].cd] : '', // 副担当者所属
+                        [subDepartment[1]]: idxS2 !== -1 ? matched[PATTERN_NAME_ITEMS[9].cd] : '',
+                        [subDepartment[2]]: idxS2 !== -1 ? matched[PATTERN_NAME_ITEMS[10].cd] : '',
+                        //[wkSubDepartment]: idxS2 !== -1 ? '[' + matched[PATTERN_NAME_ITEMS[9].cd] + ']' + matched[PATTERN_NAME_ITEMS[10].cd] : '',
+                    };
+                    const updatedItem = {
+                        ...item,
+                        datas: {
+                            ...item.datas,
+                            ['pattern']: [...(item.datas['pattern'] || []), wk],
+                        },
+                    };
+
+                    acc.push(updatedItem);
+                    return acc;
+                }, []);
+                STATE.listData.datas = updatedArray;*/
+                // 絞込追加
+                STATE.filters['旧_' + SELECTTYPE_NAME_ITEMS[0].cd + '_' + item.index] = '';
+                STATE.filters['旧_' + SELECTTYPE_NAME_ITEMS[1].cd + '_' + item.index] = '';
+                STATE.filters['旧_' + SELECTTYPE_NAME_ITEMS[3].cd + '_' + item.index] = '';
+                STATE.filters['旧_' + SELECTTYPE_NAME_ITEMS[4].cd + '_' + item.index] = '';
+
+                STATE.patternNames.names[no].backupDispFlg = true;
+                STATE.patternNames.names[no].colspan = 8; // 項目数
+            };
+
+            /**
+             * バックアップを復元
+             * @param {object} item パターンデータ
+             */
+            const restoreBackupPattern = async (item) => {
+                const no = item.index - 1; // パターン番号
+
+                // バックアップデータがない場合は何もしない
+                if (!STATE.listData.datas[0].datas['pattern'][no].OLD) {
+                    Swal.fire({
+                        title: 'バックアップデータなし',
+                        text: 'バックアップデータがありません。',
+                        icon: 'warning',
+                        confirmButtonText: '閉じる',
+                    });
+                    return;
+                }
+
+                // 確認ダイアログを表示
+                const result = await Swal.fire({
+                    title: 'バックアップを復元',
+                    text: 'パターンをバックアップデータに復元しますか？',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: '復元',
+                    cancelButtonText: 'キャンセル',
+                });
+
+                if (!result.isConfirmed) {
+                    return;
+                }
+
+                // 更新日時作成
+                luxon.Settings.defaultLocale = 'ja';
+                const updatedAt = luxon.DateTime.now().toUTC().toISO();
+
+                // 更新者
+                const executor = kintone.getLoginUser().name;
+
+                // 顧客カルテ更新（担当者が変更になったものだけを更新する）
+                // 項目名を取得
+                const staffCode = [PATTERN_NAME_ITEMS[1].cd, PATTERN_NAME_ITEMS[2].cd, SELECTTYPE_NAME_ITEMS[0].cd];
+                const subStaffCode = [PATTERN_NAME_ITEMS[3].cd, PATTERN_NAME_ITEMS[4].cd, SELECTTYPE_NAME_ITEMS[1].cd];
+                const departmentCode = [PATTERN_NAME_ITEMS[7].cd, PATTERN_NAME_ITEMS[8].cd, SELECTTYPE_NAME_ITEMS[3].cd];
+                const subDepartmentCode = [PATTERN_NAME_ITEMS[9].cd, PATTERN_NAME_ITEMS[10].cd, SELECTTYPE_NAME_ITEMS[4].cd];
+
+                // 更新データ作成
+                const updateList = STATE.listData.datas.filter((data) => data.datas[staffCode[0]] !== data.datas['pattern'][no].OLD[staff[0]] || data.datas[subStaffCode[0]] !== data.datas['pattern'][no].OLD[subStaff[0]]);
+                const updateData = updateList.map((data) => {
+                    return {
+                        [CUSTOMERCHART_FIELD.id.writeCd]: data.datas[EXCEPT_ITEMS[0]], // レコードID
+                        //[CUSTOMERCHART_FIELD.id.writeCd]: 1000, // レコードID（テスト用）
+                        [CUSTOMERCHART_FIELD.revision.writeCd]: data.datas[EXCEPT_ITEMS[1]], // リビジョン
+                        record: {
+                            //[CUSTOMERCHART_FIELD.staff.cd]: { value: data.datas[staffCode[0]], lookup: true }, // 担当者コード
+                            [CUSTOMERCHART_FIELD.staff.cd]: { value: data.datas['pattern'][no].OLD[staffCode[1]], lookup: true }, // 担当者
+                            [CUSTOMERCHART_FIELD.subStaff.cd]: { value: data.datas['pattern'][no].OLD[subStaffCode[1]], lookup: true }, // 副担当者
+                        },
+                    };
+                });
+
+                // 更新データがない場合、メッセージを表示
+                if (updateData.length === 0) {
+                    Swal.hideLoading();
+                    console.log('顧客カルテに適用するバックアップデータがありません。');
+                    Swal.update({
+                        title: '更新データなし',
+                        icon: 'info',
+                        text: '顧客カルテに適用するバックアップデータがありません。',
+                    });
+                    return;
+                }
+
+                // レコード更新
+                // 顧客カルテ更新
+                let ref = null;
+                try {
+                    ref = await updateRecords(updateData, utils.constants.CUSTOMER_APP_ID);
+                } catch (error) {
+                    console.error('顧客カルテの適用に失敗しました。', error.error);
+                    const errorCode = error.error?.code;
+                    if (errorCode === 'GAIA_CO02') {
+                        Swal.hideLoading();
+                        Swal.update({
+                            title: '顧客カルテの適用失敗',
+                            html: '<div>他のユーザが編集した可能性があります。<br>最新の内容を再表示後、再度適用を試みてください。</div>',
+                            icon: 'warning',
+                            confirmButtonText: '閉じる',
+                        });
+                    } else {
+                        Swal.hideLoading();
+                        Swal.update({
+                            title: '顧客カルテの適用失敗',
+                            text: '顧客カルテの更新に失敗しました。',
+                            icon: 'error',
+                            confirmButtonText: '閉じる',
+                        });
+                    }
+
+                    // 更新に失敗した場合、データを戻す
+                    //STATE.listData.datas = datas;
+                    return;
+                }
+
+                // パターン更新
+                try {
+                    const save = await savePattern(item, updatedAt, executor, 1);
+                } catch (error) {
+                    console.error('パターン更新に失敗しました。', error.error);
+                    //error.error.headers['x-cybozu-error']
+                    //const headerCode = error.error?.headers?.['x-cybozu-error'];
+                    const errorCode = error.error?.code;
+                    if (errorCode === 'GAIA_CO02') {
+                        Swal.hideLoading();
+                        await Swal.fire({
+                            title: 'パターンの更新失敗',
+                            html: '<div>他のユーザが編集した可能性があります。<br>最新の内容を再表示後、再度適用を試みてください。</div>',
+                            icon: 'warning',
+                            confirmButtonText: '閉じる',
+                        });
+                    } else {
+                        Swal.hideLoading();
+                        await Swal.fire({
+                            title: 'パターンの更新失敗',
+                            text: 'パターンの更新に失敗しました。',
+                            icon: 'error',
+                            confirmButtonText: '閉じる',
+                            allowOutsideClick: false,
+                        });
+                    }
+
+                    // 更新に失敗しても、顧客カルテは更新されているので、データは戻さない
+                    //STATE.listData.datas = datas;
+                    //return;
+                }
+                // バックアップデータをパターンデータに復元
+                /*STATE.listData.datas.forEach((data) => {
+                    if (data.datas['pattern'][no].OLD) {
+                        // OLDデータを現在のパターンにコピー
+                        Object.keys(data.datas['pattern'][no].OLD).forEach((key) => {
+                            data.datas['pattern'][no][key] = data.datas['pattern'][no].OLD[key];
+                        });
+                    }
+                });*/
+
+                Swal.fire({
+                    toast: true,
+                    position: 'top',
+                    icon: 'success',
+                    title: 'バックアップを復元しました',
+                    timer: 3000,
+                    timerProgressBar: true,
+                    showConfirmButton: false,
                 });
             };
 
@@ -908,10 +1173,10 @@
                     // 以前データをバックアップする
                     STATE.listData.datas.forEach((data) => {
                         // 担当者　副担当者
-                        for (let i = 0; i < 4; i++) {
-                            if (data.datas['pattern'][no].OLD) {
-                                data.datas['pattern'][no].OLD[staff[i]] = data.datas[staff[i]];
-                                data.datas['pattern'][no].OLD[subStaff[i]] = data.datas[subStaff[i]];
+                        for (let i = 0; i < staff.length; i++) {
+                            if (data.datas['pattern'][no]['OLD']) {
+                                data.datas['pattern'][no]['OLD'][staff[i]] = data.datas[staff[i]];
+                                data.datas['pattern'][no]['OLD'][subStaff[i]] = data.datas[subStaff[i]];
                             } else {
                                 data.datas['pattern'][no]['OLD'] = {
                                     [staff[i]]: data.datas[staff[i]],
@@ -928,7 +1193,7 @@
                     const departmentCode = [PATTERN_NAME_ITEMS[7].cd, PATTERN_NAME_ITEMS[8].cd, SELECTTYPE_NAME_ITEMS[3].cd];
                     const subDepartmentCode = [PATTERN_NAME_ITEMS[9].cd, PATTERN_NAME_ITEMS[10].cd, SELECTTYPE_NAME_ITEMS[4].cd];
 
-                    // 更新データ作成
+                    // 更新データ作成（パターンのデータとバックアップしたデータの比較）
                     const updateList = STATE.listData.datas.filter((data) => data.datas['pattern'][no][staffCode[0]] !== data.datas['pattern'][no].OLD[staff[0]] || data.datas['pattern'][no][subStaffCode[0]] !== data.datas['pattern'][no].OLD[subStaff[0]]);
 
                     const updateData = updateList.map((data) => {
@@ -2161,7 +2426,11 @@
                                     cd = PATTERN_NAME_ITEMS[9].cd;
                                 }
                                 num = Number(str[2]);
-                                flg = 1;
+                                if (str[0] === '新') {
+                                    flg = 1;
+                                } else if (str[0] === '旧') {
+                                    flg = 2;
+                                }
                             }
                             /*const indexes = STATE.patternNames.names.map((item) => item.index);
                             if (indexes.some((index) => key.includes(index))) {
@@ -2193,6 +2462,9 @@
                         } else if (flg === 1) {
                             // パターンの場合
                             cellValue = String(item.datas['pattern'][num - 1]?.[cd] ?? '');
+                        } else if (flg === 2) {
+                            // バックアップ用フィルタリング
+                            cellValue = String(item.datas['pattern'][num - 1]['OLD']?.[cd] ?? '');
                         } else {
                             // バックアップ用フィルタリング
                             /*Object.keys(item.datas['OLD']).forEach((item) => {
@@ -2466,10 +2738,10 @@
              */
             const isSelectType = (label) => {
                 let rc = false;
-
+                const str = label.replace(/（バックアップ）/, ''); // 数値部分削除
                 // 選択項目
                 const select = SELECTTYPE_NAME_ITEMS.map((item) => item.label);
-                if (select.includes(label)) {
+                if (select.includes(str)) {
                     rc = true;
                 }
                 return rc;
@@ -2483,19 +2755,10 @@
              */
             const isSelectData = (key, itemFlg) => {
                 let rc = false;
-                const indexes = STATE.patternNames.names.map((item) => item.index);
-                //console.log('isSelectData key:', key, ' indexes:', indexes);
-                if (indexes.some((index) => key.includes(index))) {
-                    //const num = Number(key.match(/\d+/)); // 数値のみ取得
-                    //const str = key.replace(/\d+/g, ''); // 数値部分削除
-                    const str = key.split('_');
-                    //console.log('some num:', num, ' str:', str);
-                    if ((str[1] === SELECTTYPE_NAME_ITEMS[0].cd || str[1] === SELECTTYPE_NAME_ITEMS[1].cd) && itemFlg === 'pattern') {
-                        rc = true;
-                        //STATE.patternNames.noNow = Number(str[2]) - 1; // 数値のみ取得
-                    } /*else if ((str === '旧' + SELECTTYPE_NAME_ITEMS[0].cd || str === '旧' + SELECTTYPE_NAME_ITEMS[1].cd) && itemFlg === 'backup') {
-                        rc = true;
-                    }*/
+                const str = key.split('_');
+                if (str.length !== 3) return rc; // パターン　バックアップではない
+                if (str[0] === '新') {
+                    rc = true;
                 }
                 return rc;
             };
@@ -2647,7 +2910,7 @@
                 if (wk.length === 3) {
                     str = wk[1];
                 } else {
-                    str = key; // 数値部分削除
+                    str = key;
                 }
                 const patterns = [SELECTTYPE_NAME_ITEMS[0].cd, SELECTTYPE_NAME_ITEMS[1].cd, SELECTTYPE_NAME_ITEMS[3].cd, SELECTTYPE_NAME_ITEMS[4].cd];
                 const items = SELECTTYPE_NAME_ITEMS.filter((item) => item.cd !== SELECTTYPE_NAME_ITEMS[2].cd);
@@ -2667,7 +2930,7 @@
                     if (wk[0] === '新') {
                         wkKey = datas['pattern'][num - 1][str];
                     } else if (wk[0] === '旧') {
-                        wkKey = datas['pattern'][num - 1]['OLD'].datas[str];
+                        wkKey = datas['pattern'][num - 1]['OLD'][str];
                     }
                     if (datas[items[index].cd] !== wkKey) {
                         color = PATTERN_CHANGE_COLOR;
@@ -2735,11 +2998,11 @@
                                 }
                             });
                             flg = true;
-                        } else if (wkCodes[1] === '旧') {
+                        } else if (wkCodes[0] === '旧') {
                             // バックアップの場合
                             Object.keys(datas).forEach((item) => {
                                 if (item === 'pattern' && index === datas[item][index - 1].index) {
-                                    rc = datas[item]['OLD'][index - 1][wkCodes[1]];
+                                    rc = datas[item][index - 1]['OLD'][wkCodes[1]];
                                 }
                             });
                             flg = true;
@@ -2784,9 +3047,10 @@
 
             const isBackup = (code) => {
                 let rc = false;
-                const str = code.replace(/\d+/g, ''); // 数値部分削除
-                const datas = ['旧' + '担当者コード名', '旧' + '副担当者コード名'];
-                if (datas.includes(str)) {
+                const str = code.split('_'); // 数値部分削除
+                //const datas = ['旧' + '担当者コード名', '旧' + '副担当者コード名'];
+                if (str.length !== 3) return rc;
+                if (str[0] === '旧' && STATE.patternNames.names[Number(str[2]) - 1].backupDispFlg) {
                     rc = true;
                 }
 
@@ -3184,6 +3448,8 @@
                 savePattern,
                 replaceAllPattern,
                 applyCustomerChartPattern,
+                showBackupPattern,
+                restoreBackupPattern,
                 //patternName,
                 setTitleBackColor,
                 setItemBackColor,
@@ -3214,8 +3480,8 @@
             <div id="bz_events_main_container">
                 <table class="bz_table_def">
                     <thead>
-                        <!--@showBackupPattern="showBackupPattern"-->
-                        <pattern-set @savePattern="savePattern" @replaceAllPattern="replaceAllPattern" @applyCustomerChartPattern="applyCustomerChartPattern" :pattern="STATE.patternNames.names" :colspan="STATE.itemLength?STATE.itemLength:0" />
+                        <!---->
+                        <pattern-set @savePattern="savePattern" @replaceAllPattern="replaceAllPattern" @applyCustomerChartPattern="applyCustomerChartPattern" @showBackupPattern="showBackupPattern" @restoreBackupPattern="restoreBackupPattern" :pattern="STATE.patternNames.names" :colspan="STATE.itemLength?STATE.itemLength:0" />
 
                         <tr>
                             <!--{{STATE.listData.items?STATE.listData.items.length:''}}:{{STATE.listData.items?STATE.patternNames.len:''}}-->
@@ -3265,7 +3531,9 @@
                                                     <a class="no-color-change underline cursor-pointer" :href="generateHref(field.datas.$id)" target="_blank"> {{field.datas[key.code]}} </a>
                                                 </span>
                                             </template>
-                                            <!--<template v-else-if="isBackup(key.code)">test:{{getBackupCode(key.code,field.datas)}} </template>-->
+                                            <!--<template v-else-if="isBackup(key.code)">
+                                                <span :title="'バックアップ'"> {{"TEST"}} </span>
+                                            </template>-->
                                             <template v-else>{{getStaffData(key.code,field.datas)}} </template>
                                         </template>
                                     </td>
