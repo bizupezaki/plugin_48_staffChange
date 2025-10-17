@@ -724,7 +724,7 @@
                         setTimeout(async () => {
                             const confirmResult = await Swal.fire({
                                 title: '確認',
-                                text: 'パターンを非表示にしますか？',
+                                text: '選択したパターンを非表示にしてよいですか？',
                                 icon: 'warning',
                                 showCancelButton: true,
                                 confirmButtonText: 'はい',
