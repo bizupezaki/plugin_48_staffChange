@@ -646,7 +646,7 @@
                     tableHtml += '</tr></thead>';
                     tableHtml += '<tbody>';
                     records.forEach((rec, index) => {
-                        tableHtml += '<tr>';
+                        tableHtml += '<tr style="cursor: pointer;">';
                         const wkname = rec[key]?.value ?? '';
                         let wkcreated = rec[STAFF_CHANGE_FIELDCD.createdTime.cd]?.value ?? '';
                         let dt = luxon.DateTime.fromJSDate(new Date(wkcreated));
@@ -656,7 +656,7 @@
                         wkupdated = dt.toFormat('yyyy年MM月dd日 HH:mm');
                         let wkmodifier = rec[STAFF_CHANGE_FIELDCD.modifier.cd]?.value?.name ?? '';
                         let wkId = rec['$id']?.value ?? '';
-                        tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: center;"><input type="checkbox" name="patternSelect" value="${index}" data-pattern-id="${wkId}"></td>`;
+                        tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: center;"><input type="checkbox" name="patternSelect" style="cursor: pointer;" value="${index}" data-pattern-id="${wkId}"></td>`;
                         tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: left;">${wkname}</td>`;
                         tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${wkcreated}</td>`;
                         tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${wkupdated}</td>`;
@@ -2385,13 +2385,16 @@
                         // 見つかった位置に挿入
                         STATE.listDataPattern.splice(index, 0, wk);
                     }
+                    row.style.backgroundColor = HIGHTLIGHT_COLOR;
                 } else {
                     // 既に選択されている場合はリストから削除
                     const idx = STATE.listDataPattern.findIndex((item) => item.clickNo === relativeIndex);
                     if (idx !== -1) {
                         STATE.listDataPattern.splice(idx, 1);
+                        row.style.backgroundColor = '';
                     }
                 }
+                Swal.resetValidationMessage(); // バリデーションメッセージをリセット
             };
 
             /**
@@ -2404,31 +2407,34 @@
                 const rows = document.querySelectorAll(`#${tableId} tbody tr`);
                 rows.forEach((row) => {
                     // 全行にイベントリスナーを追加
-                    row.addEventListener('click', () => {
+                    row.addEventListener('click', (event) => {
                         // 既存のハイライトを削除
-                        rows.forEach((r) => {
-                            r.style.backgroundColor = '';
-                        });
+                        //rows.forEach((r) => {
+                        //r.style.backgroundColor = '';
+                        //});
                         // クリックされた行にハイライトを追加
-                        row.style.backgroundColor = highlightClass;
+                        //row.style.backgroundColor = highlightClass;
 
                         //STATE.listDataPattern.clickNo = relativeIndex;
                         //STATE.listDataPattern.clickName = row.cells[0]?.textContent?.trim() ?? ''; // 1列目のパターン名
                         // クリックされた行のインデックスを取得
-                        /*const tbody = row.parentElement; // 親要素
-                        const rowsInTbody = Array.from(tbody.querySelectorAll('tr'));
-                        const relativeIndex = rowsInTbody.indexOf(row);
-                        const checkbox = row.querySelector('input[name="patternSelect"]');
-                        if (!checkbox.checked) {
-                            // 既に選択されている場合はリストから削除
-                            const idx = STATE.listDataPattern.findIndex((item) => item.clickNo === relativeIndex);
+                        //const tbody = row.parentElement; // 親要素
+                        //const rowsInTbody = Array.from(tbody.querySelectorAll('tr'));
+                        //const relativeIndex = rowsInTbody.indexOf(row);
+                        if (!event.target.matches('input[type="checkbox"]')) {
+                            // チェックボックスがクリックされた場合は無視
+                            const checkbox = row.querySelector('input[type="checkbox"]');
+                            if (checkbox.checked) {
+                                // 既に選択されている場合はリストから削除
+                                /*const idx = STATE.listDataPattern.findIndex((item) => item.clickNo === relativeIndex);
                             if (idx !== -1) {
                                 STATE.listDataPattern.splice(idx, 1);
-                            }
-                            //checkbox.checked = false;
-                        } else {
-                            // クリックされていて、チェックがONの場合
-                            const name = row.cells[0]?.textContent?.trim() ?? '';
+                            }*/
+                                checkbox.checked = false;
+                                row.style.backgroundColor = '';
+                            } else {
+                                // クリックされていて、チェックがONの場合
+                                /*const name = row.cells[0]?.textContent?.trim() ?? '';
                             const wk = { clickNo: relativeIndex, datas: [], clickName: name };
 
                             // 挿入位置を検索
@@ -2439,15 +2445,24 @@
                             } else {
                                 // 見つかった位置に挿入
                                 STATE.listDataPattern.splice(index, 0, wk);
+                            }*/
+                                checkbox.checked = true;
+                                row.style.backgroundColor = highlightClass;
                             }
-                            //checkbox.checked = true;
-                        }*/
 
-                        // クリックされた行のパターン名をSwalのinputにセット
-                        //Swal.getPopup().querySelector('#clickName').value = STATE.listDataPattern.clickName;
-                        Swal.resetValidationMessage(); // バリデーションメッセージをリセット
-
-                        //console.log('クリックされた行のインデックス:', STATE.listDataPattern.clickNo);
+                            // クリックされた行のパターン名をSwalのinputにセット
+                            //Swal.getPopup().querySelector('#clickName').value = STATE.listDataPattern.clickName;
+                            Swal.resetValidationMessage(); // バリデーションメッセージをリセット
+                            //checkbox.addEventListener('click', (event) => {
+                            //event.stopPropagation(); // 行のクリックイベントが発生しないようにする
+                            //Swal.resetValidationMessage(); // バリデーションメッセージをリセット
+                            //});
+                            //if (isChecked) {
+                            // チェックされている場合、イベントを発火させる
+                            checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+                            //}
+                            //console.log('クリックされた行のインデックス:', STATE.listDataPattern.clickNo);
+                        }
                     });
                 });
 
@@ -2458,7 +2473,10 @@
                     const isChecked = selectedPatterns.some((pattern) => pattern.index === parseInt(checkbox.value));
                     checkbox.checked = isChecked;
                     checkbox.addEventListener('change', handleCheckboxChange);
-                    if (isChecked) {
+                    if (selectedPatterns.some((pattern) => pattern.index === parseInt(checkbox.value))) {
+                        // チェックされている場合、行にハイライトを設定
+                        const row = checkbox.closest('tr');
+                        row.style.backgroundColor = highlightClass;
                         // チェックされている場合、イベントを発火させる
                         checkbox.dispatchEvent(new Event('change', { bubbles: true }));
                     }

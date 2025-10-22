@@ -1,5 +1,9 @@
 #bz_update_staffs_container {
+    --hc-height: 0px;
+    --top: 48px;
+
     margin: 20px;
+
     &,
     * {
         box-sizing: border-box;
@@ -11,7 +15,53 @@
     button {
         vertical-align: middle;
     }
+
     button {
         white-space: nowrap;
+    }
+
+    #bz_header {
+        position: sticky;
+        top: var(--top);
+        background: #ffffff;
+        z-index: 1;
+    }
+
+    table.bz_table_def {
+        border-collapse: separate;
+        border-spacing: 0;
+
+        border-top: 1px solid #999;
+        border-left: 1px solid #999;
+
+        thead {
+            background-color: #eee;
+
+            position: sticky;
+            border-collapse: separate;
+            top: calc(var(--hc-height) + var(--top));
+            z-index: 2;
+        }
+
+        th,
+        td {
+            border-top-style: none;
+            border-left-style: none;
+            white-space: nowrap;
+
+            a.no-color-change {
+                color: inherit;
+            }
+
+            a.underline {
+                text-decoration: underline;
+            }
+        }
+
+        tr {
+            &.bz_tr_diselect {
+                background-color: #ccc;
+            }
+        }
     }
 }
