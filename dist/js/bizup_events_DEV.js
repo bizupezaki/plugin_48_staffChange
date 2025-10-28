@@ -398,18 +398,6 @@
             };
 
             /**
-             * 行選択チェック
-             * @param {String} value 選択値
-             * @returns {}
-             */
-            /*const validatorRow = (value) => {
-                if (!value || String(value).trim() === '') {
-                    return 'パターンを選択してください';
-                }
-                return null;
-            };*/
-
-            /**
              * パターン名入力画面作成
              * @param {String} title
              * @param {string} text
@@ -797,13 +785,16 @@
                         return;
                     }
 
+                    //let i = 0;
                     STATE.listDataPattern.forEach((pattern, index) => {
-                        const jsonData = patterns[STATE.listDataPattern[index].clickNo].jsonData;
+                        let jsonData = patterns[STATE.listDataPattern[index].clickNo].jsonData;
+                        //i++;
+                        //if (i === 1) jsonData = '{name:"test",language:"ja"}'; // テスト用
                         //console.log('listDataPattern:', STATE.listDataPattern);
-
                         // データをJSONからオブジェクトに変換してSTATEに保存
                         //const jsonData = STATE.listDataPattern.datas[STATE.listDataPattern.clickNo].jsonData;
                         const clickData = JSON.parse(jsonData);
+
                         pattern.datas = clickData;
                         //console.log('クリックされた行のデータ:', clickData);
 
@@ -868,7 +859,7 @@
                             };
 
                             // バックアップ表示
-                            if (matched['OLD']) {
+                            if (matched && matched['OLD']) {
                                 //console.log('OLD');
                                 updatedItem.datas['pattern'][cnt - 1]['OLD'] = {
                                     ...updatedItem.datas['pattern'][cnt - 1]['OLD'],
@@ -911,14 +902,8 @@
                         STATE.filters['新_' + SELECTTYPE_NAME_ITEMS[4].cd + '_' + cnt] = '';
                     });
                 } catch (error) {
-                    console.error('openPattern取得失敗:', error.error);
+                    console.error('openPattern取得失敗:', error);
                 }
-
-                // stickyヘッダー対応
-                /*nextTick(() => {
-                    //bizupUtil.common.setStickyHeaderHeight(CONTAINER_ID, '');
-                    console.log('stickyヘッダー対応');
-                });*/
             };
 
             /**
@@ -1722,8 +1707,6 @@
                     if (!rc) {
                         msgFlag[0] = true;
                         msg = '変更前担当者';
-                        //Swal.showValidationMessage('変更前担当者のデータがありません。');
-                        //return false;
                     }
                 }
                 if (subStaffCheck) {
@@ -1865,7 +1848,16 @@
                     radioButtons.forEach((radio) => {
                         radio.addEventListener('change', (event) => {
                             let options = generateBulkReplaceSelectOptions(staffsCode, staffsCodePattern, substaffsCode);
-                            select.innerHTML = options;
+                            select.innerHTML = ''; // 初期化
+                            // HTML文字列を構造化して追加
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(`<select>${options}</select>`, 'text/html');
+                            const element = doc.querySelectorAll('option');
+                            Array.from(element).forEach((opt) => {
+                                select.appendChild(opt);
+                            });
+                            select.selectedIndex = 0;
+                            //select.innerHTML = options;
                         });
                     });
 
@@ -1881,7 +1873,16 @@
                             subStaffCheckbox.checked = checked;
                             if (staffCheckbox.checked && subStaffCheckbox.checked) {
                                 let options = generateBulkReplaceSelectOptions(staffsCode, staffsCodePattern, substaffsCode);
-                                select.innerHTML = options;
+                                select.innerHTML = ''; // 初期化
+                                // HTML文字列を構造化して追加
+                                const parser = new DOMParser();
+                                const doc = parser.parseFromString(`<select>${options}</select>`, 'text/html');
+                                const element = doc.querySelectorAll('option');
+                                Array.from(element).forEach((opt) => {
+                                    select.appendChild(opt);
+                                });
+                                select.selectedIndex = 0;
+                                //select.innerHTML = options;
                             }
                             if (staffCheckbox.checked || subStaffCheckbox.checked) {
                                 Swal.resetValidationMessage();
@@ -1900,7 +1901,16 @@
                                 Swal.resetValidationMessage();
                             }
                             let options = generateBulkReplaceSelectOptions(staffsCode, staffsCodePattern, substaffsCode);
-                            select.innerHTML = options;
+                            select.innerHTML = ''; // 初期化
+                            // HTML文字列を構造化して追加
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(`<select>${options}</select>`, 'text/html');
+                            const element = doc.querySelectorAll('option');
+                            Array.from(element).forEach((opt) => {
+                                select.appendChild(opt);
+                            });
+                            select.selectedIndex = 0;
+                            //select.innerHTML = options;
                         };
                         staffCheckbox.addEventListener('change', handleStaffCheckChange);
                         subStaffCheckbox.addEventListener('change', handleStaffCheckChange);
@@ -2408,59 +2418,20 @@
                 rows.forEach((row) => {
                     // 全行にイベントリスナーを追加
                     row.addEventListener('click', (event) => {
-                        // 既存のハイライトを削除
-                        //rows.forEach((r) => {
-                        //r.style.backgroundColor = '';
-                        //});
-                        // クリックされた行にハイライトを追加
-                        //row.style.backgroundColor = highlightClass;
-
-                        //STATE.listDataPattern.clickNo = relativeIndex;
-                        //STATE.listDataPattern.clickName = row.cells[0]?.textContent?.trim() ?? ''; // 1列目のパターン名
-                        // クリックされた行のインデックスを取得
-                        //const tbody = row.parentElement; // 親要素
-                        //const rowsInTbody = Array.from(tbody.querySelectorAll('tr'));
-                        //const relativeIndex = rowsInTbody.indexOf(row);
                         if (!event.target.matches('input[type="checkbox"]')) {
                             // チェックボックスがクリックされた場合は無視
                             const checkbox = row.querySelector('input[type="checkbox"]');
                             if (checkbox.checked) {
-                                // 既に選択されている場合はリストから削除
-                                /*const idx = STATE.listDataPattern.findIndex((item) => item.clickNo === relativeIndex);
-                            if (idx !== -1) {
-                                STATE.listDataPattern.splice(idx, 1);
-                            }*/
                                 checkbox.checked = false;
                                 row.style.backgroundColor = '';
                             } else {
-                                // クリックされていて、チェックがONの場合
-                                /*const name = row.cells[0]?.textContent?.trim() ?? '';
-                            const wk = { clickNo: relativeIndex, datas: [], clickName: name };
-
-                            // 挿入位置を検索
-                            let index = STATE.listDataPattern.findIndex((item) => item.clickNo > relativeIndex);
-                            if (index === -1) {
-                                // 挿入位置が見つからない場合は末尾に追加
-                                STATE.listDataPattern.push(wk);
-                            } else {
-                                // 見つかった位置に挿入
-                                STATE.listDataPattern.splice(index, 0, wk);
-                            }*/
                                 checkbox.checked = true;
                                 row.style.backgroundColor = highlightClass;
                             }
 
-                            // クリックされた行のパターン名をSwalのinputにセット
-                            //Swal.getPopup().querySelector('#clickName').value = STATE.listDataPattern.clickName;
                             Swal.resetValidationMessage(); // バリデーションメッセージをリセット
-                            //checkbox.addEventListener('click', (event) => {
-                            //event.stopPropagation(); // 行のクリックイベントが発生しないようにする
-                            //Swal.resetValidationMessage(); // バリデーションメッセージをリセット
-                            //});
-                            //if (isChecked) {
-                            // チェックされている場合、イベントを発火させる
+                            // イベントを発火させる
                             checkbox.dispatchEvent(new Event('change', { bubbles: true }));
-                            //}
                             //console.log('クリックされた行のインデックス:', STATE.listDataPattern.clickNo);
                         }
                     });
@@ -2481,16 +2452,7 @@
                         checkbox.dispatchEvent(new Event('change', { bubbles: true }));
                     }
                 });
-                /*if (selectedPatterns.length > 0) {
-                            // 保存したチェックボックスの内容を設定
-                            const checkboxes = Swal.getPopup().querySelectorAll('input[name="patternSelect"]');
-                            if (checkboxes.length > 0) {
-                                checkboxes.forEach((checkbox) => {
-                                    const isChecked = selectedPatterns.some((pattern) => pattern.index === parseInt(checkbox.value));
-                                    checkbox.checked = isChecked;
-                                });
-                            }
-                        }*/
+
                 // ポップアップダイアログ画面の高さを調整
                 const popup = Swal.getPopup();
 
@@ -3029,6 +2991,65 @@
                 return rc;
             };
 
+            /**
+             * ソート用関数
+             * @param {String} code フィールドコード
+             * @param {boolean} isAsc true:昇順、false:降順
+             */
+            const sortData = (code, isAsc) => {
+                const codeSegments = code.split('_');
+                const isPatternField = codeSegments.length === 3 && (codeSegments[0] === '新' || codeSegments[0] === '旧');
+
+                STATE.listData.datas = [...STATE.listData.datas].sort((a, b) => {
+                    let valA, valB;
+
+                    if (isPatternField) {
+                        // パターンフィールドの場合
+                        const patternIndex = parseInt(codeSegments[2]) - 1;
+                        const fieldKey = codeSegments[1];
+                        const isBackupField = codeSegments[0] === '旧';
+
+                        if (isBackupField) {
+                            // バックアップフィールドの場合
+                            valA = a.datas?.['pattern']?.[patternIndex]?.['OLD']?.[fieldKey] ?? '';
+                            valB = b.datas?.['pattern']?.[patternIndex]?.['OLD']?.[fieldKey] ?? '';
+                        } else {
+                            // 通常のパターンフィールドの場合
+                            valA = a.datas?.['pattern']?.[patternIndex]?.[fieldKey] ?? '';
+                            valB = b.datas?.['pattern']?.[patternIndex]?.[fieldKey] ?? '';
+                        }
+                    } else {
+                        // 通常フィールドの場合
+                        valA = a.datas?.[code] ?? '';
+                        valB = b.datas?.[code] ?? '';
+                    }
+
+                    // 数値かどうかをチェック
+                    const numA = parseFloat(valA);
+                    const numB = parseFloat(valB);
+                    const isNumeric = !isNaN(numA) && !isNaN(numB) && valA !== '' && valB !== '';
+
+                    if (isNumeric) {
+                        // 数値の場合
+                        return isAsc ? numA - numB : numB - numA;
+                    } else {
+                        // 文字列の場合（空文字列は最後にソート）
+                        const strA = String(valA);
+                        const strB = String(valB);
+
+                        // 空文字列の処理
+                        if (strA === '' && strB === '') return 0;
+                        if (strA === '') return isAsc ? 1 : -1;
+                        if (strB === '') return isAsc ? -1 : 1;
+
+                        // 日本語対応のロケール比較
+                        return isAsc ? String(valA).localeCompare(String(valB)) : String(valB).localeCompare(String(valA));
+                        //? strA.localeCompare(strB, 'ja', { numeric: true, sensitivity: 'base' })
+                        //: strB.localeCompare(strA, 'ja', { numeric: true, sensitivity: 'base' });
+                    }
+                });
+            };
+
             onMounted(async () => {
                 // 初期表示
 
@@ -3427,6 +3448,7 @@
                 selectedStaff,
                 isBackup,
                 handleCheckboxChange,
+                sortData,
             };
         },
         template: /* HTML */ `
@@ -3448,9 +3470,13 @@
                         <pattern-set @savePattern="savePattern" @replaceAllPattern="replaceAllPattern" @applyCustomerChartPattern="applyCustomerChartPattern" @showBackupPattern="showBackupPattern" @restoreBackupPattern="restoreBackupPattern" :pattern="STATE.patternNames.names" :colspan="STATE.itemLength?STATE.itemLength:0" />
 
                         <tr>
-                            <template v-for="field in STATE.listData.items" :key="field">
+                            <template v-for="(field, index) in STATE.listData.items" :key="field">
                                 <th v-if="isVisibleItem(field.code)" :style="{backgroundColor:setTitleBackColor(field.code)}">
-                                    <div>{{ setNewLabel(field.label) }}</div>
+                                    <div>
+                                        {{ setNewLabel(field.label) }}
+                                        <span class="sort-btn" @click="sortData(field.code,true)">▲</span>
+                                        <span class="sort-btn" @click="sortData(field.code,false)">▼</span>
+                                    </div>
                                     <div>
                                         <!-- 追加したあと、データにすべてを設定する -->
                                         <template v-if="!(isSelectType(field.label))">
