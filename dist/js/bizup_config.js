@@ -122,7 +122,9 @@
                     if (Object.hasOwn(field, 'lookup') && Number(field.lookup.relatedApp.app) === Number(DATA.apps.STAFF_APP_ID)) {
                         staffFields.push(field);
                     }
-                    preAllFields.push(field);
+                    if (field.type !== 'REFERENCE_TABLE') {
+                        preAllFields.push(field);
+                    }
                 });
                 console.log(staffFields);
 

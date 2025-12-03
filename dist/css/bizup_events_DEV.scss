@@ -66,5 +66,65 @@
         cursor: pointer;
         font-size: 13px;
         margin-left: 4px;
+        color: #888888;
     }
+    .sort-btn.active {
+        color: #0000ff;
+        font-weight: bold;
+    }
+
+    // 複数選択ドロップダウン関連スタイル
+    .multi-select-container {
+        position: relative;
+    }
+
+    .multi-select-button {
+        width: 100%;
+        text-align: left;
+        padding: 4px 20px 4px 4px;
+        border: 1px solid #ccc;
+        background: white;
+        cursor: pointer;
+        position: relative;
+        //white-space: nowrap;
+        //overflow: hidden;
+        //text-overflow: ellipsis;
+    }
+
+    .multi-select-arrow {
+        position: absolute;
+        right: 4px;
+        top: 50%;
+        transform: translateY(-50%);    //縦中央
+    }
+
+    .multi-select-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        min-width: 100px;
+        background: white;
+        border: 1px solid #ccc;
+        border-top: none;
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 1000;
+    }
+
+    .multi-select-option {
+        display: block;
+        padding: 4px 8px;
+        cursor: pointer;
+        font-size: 12px;
+        text-align: left;
+        border-top: 1px solid #eee;
+
+        &:first-child {
+            border-top: none;
+        }
+
+        input[type="checkbox"] {
+            margin-right: 4px;
+        }
+    }   
 }
