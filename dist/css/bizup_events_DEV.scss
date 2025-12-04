@@ -76,6 +76,7 @@
     // 複数選択ドロップダウン関連スタイル
     .multi-select-container {
         position: relative;
+        min-width: 100px;
     }
 
     .multi-select-button {
