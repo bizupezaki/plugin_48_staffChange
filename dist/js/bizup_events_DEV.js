@@ -187,6 +187,7 @@
                 previousMultiSelectFilters: {}, // 前回の複数選択フィルター値
                 dateFields: [], // 日付フィールド
                 deleteHifun: [CUSTOMERCHART_FIELD.postalCode.cd, CUSTOMERCHART_FIELD.tel.cd, CUSTOMERCHART_FIELD.fax.cd], // ハイフン削除用
+                //filtersDate: { from: null, to: null },
             });
 
             // 項目名除外
@@ -213,8 +214,8 @@
 
             // コードと名称をひとつにまとめたいが・・・
             const SELECTTYPE_NAME_ITEMS = [
-                { cd: '担当者コード名', type: '', label: ' 担当者名', index: 1 },
-                { cd: '副担当者コード名', type: '', label: ' 副担当者名', index: 3 },
+                { cd: '担当者コード名', type: '', label: '担当者名', index: 1 },
+                { cd: '副担当者コード名', type: '', label: '副担当者名', index: 3 },
                 { cd: '顧客コード名', type: '', label: '顧客名', index: 0 },
                 { cd: '担当者所属コード名', type: '', label: '担当者所属', index: 2 },
                 { cd: '副担当者所属コード名', type: '', label: '副担当者所属', index: 4 },
@@ -224,7 +225,15 @@
             const EMPTY = { value: '__EMPTY__', label: '未設定' };
 
             // 取得除外フィールド
-            const EXCLUDE_FIELDS = [CUSTOMERCHART_FIELD.team, CUSTOMERCHART_FIELD.subTeam];
+            const EXCLUDE_FIELDS = [
+                SELECTTYPE_NAME_ITEMS[0].label, // 担当者名
+                SELECTTYPE_NAME_ITEMS[1].label, // 副担当者名
+                SELECTTYPE_NAME_ITEMS[2].label, // 顧客名
+                SELECTTYPE_NAME_ITEMS[3].label, // 担当者所属
+                SELECTTYPE_NAME_ITEMS[4].label, // 副担当者所属
+                //CUSTOMERCHART_FIELD.team,       // 担当所属
+                //CUSTOMERCHART_FIELD.subTeam     // 副担当者所属
+            ];
 
             const CONF = CONFDATA.CONFIG_DATA ? JSON.parse(CONFDATA.CONFIG_DATA) : '';
 
@@ -643,6 +652,18 @@
                 STATE.filters['新_' + SELECTTYPE_NAME_ITEMS[3].cd + '_' + cnt] = '';
                 STATE.filters['新_' + SELECTTYPE_NAME_ITEMS[4].cd + '_' + cnt] = '';
 
+                // 初期表示時に全ての複数選択フィルターを全選択状態にする
+                const select = ['新_' + SELECTTYPE_NAME_ITEMS[0].cd + '_' + cnt, '新_' + SELECTTYPE_NAME_ITEMS[1].cd + '_' + cnt, '新_' + SELECTTYPE_NAME_ITEMS[3].cd + '_' + cnt, '新_' + SELECTTYPE_NAME_ITEMS[4].cd + '_' + cnt];
+                STATE.listData.items.forEach((item) => {
+                    // 単一選択フィールドとテキスト入力フィールドを除外
+                    //if (!isSingleSelect(item.code) && isSelectType(item.label, item.type)) {
+                    if (isSelectType(item.label, item.type) && select.includes(item.code)) {
+                        const allOptions = getUniqueOptions(item.code);
+                        const allValues = [...allOptions.map((opt) => opt.value), EMPTY.value];
+                        STATE.multiSelectFilters[item.code] = allValues;
+                        //STATE.filters[item.code] = allValues[0] || '';
+                    }
+                });
                 // stickyヘッダー対応
                 nextTick(() => {
                     bizupUtil.common.setStickyHeaderHeight(CONTAINER_ID, '');
@@ -661,7 +682,7 @@
                 try {
                     const condition = [STAFF_CHANGE_FIELDCD.isVisible.cd] + ' not in ("ON")';
                     const records = await getRecords([], condition, '', utils.constants.THIS_APP_ID);
-                    //console.log('openPattern取得結果:', records);
+                    console.log('openPattern取得結果:', records);
                     // 取得したデータをSwalを使って、表で表示する
                     if (!records || records.length === 0) {
                         Swal.fire({
@@ -717,7 +738,7 @@
                         tableHtml += '</tr>';
 
                         // JSONデータを取得
-                        patterns.push({ name: rec[key].value, jsonData: rec[STAFF_CHANGE_FIELDCD.jsonData.cd]?.value ?? '', id: rec[EXCEPT_ITEMS[0]].value, revision: rec[EXCEPT_ITEMS[1]].value });
+                        patterns.push({ name: rec[key].value, jsonData: rec[STAFF_CHANGE_FIELDCD.jsonData.cd]?.value ?? '', id: rec[EXCEPT_ITEMS[0]].value, revision: rec[EXCEPT_ITEMS[1]].value, tekiyo: rec[STAFF_CHANGE_FIELDCD.appliedDate.cd]?.value ?? '' });
                     });
                     tableHtml += '</tbody></table></div>';
                     tableHtml += '<input type="hidden" id="clickName" name="clickName" value="">';
@@ -959,11 +980,36 @@
                         });
                         STATE.patternNames.len = cnt;
 
+                        // OLDの有無とOLDのデータがnullかどうかで、バックアップの有無を設定
+                        if (STATE.listData.datas[0].datas['pattern'][cnt - 1].OLD) {
+                            if (STATE.listData.datas[0].datas['pattern'][cnt - 1].OLD[PATTERN_NAME_ITEMS[1].cd] !== null && STATE.listData.datas[0].datas['pattern'][cnt - 1].OLD[PATTERN_NAME_ITEMS[1].cd] !== undefined) {
+                                //if (patterns[STATE.listDataPattern[index].clickNo].tekiyo !== '') {
+                                STATE.patternNames.names[cnt - 1].backupDisableFlg = false;
+                            } else {
+                                STATE.patternNames.names[cnt - 1].backupDisableFlg = true;
+                            }
+                        } else {
+                            STATE.patternNames.names[cnt - 1].backupDisableFlg = true;
+                        }
+
                         // 絞込追加
                         STATE.filters['新_' + SELECTTYPE_NAME_ITEMS[0].cd + '_' + cnt] = '';
                         STATE.filters['新_' + SELECTTYPE_NAME_ITEMS[1].cd + '_' + cnt] = '';
                         STATE.filters['新_' + SELECTTYPE_NAME_ITEMS[3].cd + '_' + cnt] = '';
                         STATE.filters['新_' + SELECTTYPE_NAME_ITEMS[4].cd + '_' + cnt] = '';
+
+                        // 初期表示時に全ての複数選択フィルターを全選択状態にする
+                        const select = ['新_' + SELECTTYPE_NAME_ITEMS[0].cd + '_' + cnt, '新_' + SELECTTYPE_NAME_ITEMS[1].cd + '_' + cnt, '新_' + SELECTTYPE_NAME_ITEMS[3].cd + '_' + cnt, '新_' + SELECTTYPE_NAME_ITEMS[4].cd + '_' + cnt];
+                        STATE.listData.items.forEach((item) => {
+                            // 単一選択フィールドとテキスト入力フィールドを除外
+                            //if (!isSingleSelect(item.code) && isSelectType(item.label, item.type)) {
+                            if (isSelectType(item.label, item.type) && select.includes(item.code)) {
+                                const allOptions = getUniqueOptions(item.code);
+                                const allValues = [...allOptions.map((opt) => opt.value), EMPTY.value];
+                                STATE.multiSelectFilters[item.code] = allValues;
+                                //STATE.filters[item.code] = allValues[0] || '';
+                            }
+                        });
                     });
                 } catch (error) {
                     console.error('openPattern取得失敗:', error);
@@ -978,7 +1024,7 @@
                 const no = item.index - 1; // パターン番号
 
                 // バックアップデータがない場合は何もしない
-                if (!STATE.listData.datas[0].datas['pattern'][no].OLD) {
+                if (!STATE.listData.datas[0].datas['pattern'][no].OLD || STATE.patternNames.names[no].backupDisableFlg) {
                     Swal.fire({
                         title: 'バックアップデータなし',
                         text: 'バックアップデータがありません。',
@@ -1018,6 +1064,19 @@
 
                 STATE.patternNames.names[no].backupDispFlg = true;
                 STATE.patternNames.names[no].colspan = 8; // 項目数
+
+                // 初期表示時に全ての複数選択フィルターを全選択状態にする
+                const select = ['旧_' + SELECTTYPE_NAME_ITEMS[0].cd + '_' + item.index, '旧_' + SELECTTYPE_NAME_ITEMS[1].cd + '_' + item.index, '旧_' + SELECTTYPE_NAME_ITEMS[3].cd + '_' + item.index, '旧_' + SELECTTYPE_NAME_ITEMS[4].cd + '_' + item.index];
+                STATE.listData.items.forEach((item) => {
+                    // 単一選択フィールドとテキスト入力フィールドを除外
+                    //if (!isSingleSelect(item.code) && isSelectType(item.label, item.type)) {
+                    if (isSelectType(item.label, item.type) && select.includes(item.code)) {
+                        const allOptions = getUniqueOptions(item.code);
+                        const allValues = [...allOptions.map((opt) => opt.value), EMPTY.value];
+                        STATE.multiSelectFilters[item.code] = allValues;
+                        //STATE.filters[item.code] = allValues[0] || '';
+                    }
+                });
             };
 
             /**
@@ -1495,6 +1554,7 @@
                     const subDepartment = [PATTERN_NAME_ITEMS[9].cd, PATTERN_NAME_ITEMS[10].cd];
 
                     const no = item.index - 1; // パターン番号
+                    let flg = false; // 更新フラグ（true:更新 false:新規）
                     // JSONに変換
                     const filtered = STATE.listData.datas.map((data) => {
                         const result = {
@@ -1527,6 +1587,7 @@
                             result.OLD[PATTERN_NAME_ITEMS[8].cd] = utils.common.containsKey(data.datas['pattern'][no]['OLD'], PATTERN_NAME_ITEMS[8].cd) ? data.datas['pattern'][no]['OLD'][PATTERN_NAME_ITEMS[8].cd] : null; // 副担当者名
                             result.OLD[PATTERN_NAME_ITEMS[9].cd] = utils.common.containsKey(data.datas['pattern'][no]['OLD'], PATTERN_NAME_ITEMS[9].cd) ? data.datas['pattern'][no]['OLD'][PATTERN_NAME_ITEMS[9].cd] : null; // 副担当者所属コード
                             result.OLD[PATTERN_NAME_ITEMS[10].cd] = utils.common.containsKey(data.datas['pattern'][no]['OLD'], PATTERN_NAME_ITEMS[10].cd) ? data.datas['pattern'][no]['OLD'][PATTERN_NAME_ITEMS[10].cd] : null; // 副担当者所属名
+                            flg = true; // 更新フラグをtrueにする
                         } else {
                             result.OLD[PATTERN_NAME_ITEMS[1].cd] = null; // 担当者コード
                             result.OLD[PATTERN_NAME_ITEMS[2].cd] = null;
@@ -1536,10 +1597,22 @@
                             result.OLD[PATTERN_NAME_ITEMS[8].cd] = null;
                             result.OLD[PATTERN_NAME_ITEMS[9].cd] = null;
                             result.OLD[PATTERN_NAME_ITEMS[10].cd] = null;
+                            //flg = false; // 更新フラグをfalseにする
+                            //if (mode === 0) STATE.patternNames.names[no].backupDisable = false; // バックアップデータなしフラグ
                         }
 
                         return result;
                     });
+                    if (!flg) {
+                        // 新規パターン保存の場合、バックアップデータなしフラグを立てる
+                        if (mode === 0) {
+                            STATE.patternNames.names[no].backupDisableFlg = true;
+                        } else {
+                            STATE.patternNames.names[no].backupDisableFlg = false;
+                        } // バックアップデータなしフラグ
+                    } else {
+                        STATE.patternNames.names[no].backupDisableFlg = true; // バックアップデータなしフラグ
+                    }
                     const json = JSON.stringify(filtered, null, 2);
                     const id = item.id;
                     //const id = 1000; // レコードID（テスト用）
@@ -1558,6 +1631,10 @@
                             [STAFF_CHANGE_FIELDCD.executor.cd]: { value: executor },
                         },
                     };
+                    if (mode !== 0) {
+                        // 顧客カルテに適用、バックアップ復元の場合、更新日時もセット
+                        //updateData.record[STAFF_CHANGE_FIELDCD.appliedDate.cd] = { value: updatedAt };
+                    }
 
                     try {
                         const ref = await updateRecords([updateData], utils.constants.THIS_APP_ID);
@@ -2716,10 +2793,62 @@
             };
 
             /**
+             * 複数選択ドロップダウンの幅を指定する
+             * @param {string} oyaId 親要素id
+             * @param {string} id id
+             * @returns {string} 幅(px)
+             */
+            const getWidthMultiSelect = (oyaId, id) => {
+                const oya = document.getElementById(oyaId);
+                const oyaW = oya ? oya.offsetWidth : 0;
+                const elementW = document.getElementById(id) ? document.getElementById(id).offsetWidth : 0;
+                //const code = id.split('_').pop();
+                //const staffs = [SELECTTYPE_NAME_ITEMS[0].cd, SELECTTYPE_NAME_ITEMS[1].cd, SELECTTYPE_NAME_ITEMS[3].cd, SELECTTYPE_NAME_ITEMS[3].cd];
+                if (oyaW > elementW) {
+                    return oyaW + 'px';
+                } else {
+                    return elementW + 'px';
+                }
+                /*if (oyaW > elementW && elementW > 0) {
+                    return oyaW + 'px';
+                } else {
+                    if (elementW > 0) {
+                        return elementW + 'px';
+                    } else {
+                        return 'px';
+                    }
+                }*/
+            };
+
+            /**
+             * 複数選択ドロップダウンの幅を指定する
+             * @param {string} fieldCode フィールドコード
+             * @returns {string} min-width(px)
+             */
+            const setMinWidth = (fieldCode) => {
+                const codes = fieldCode.split('_');
+                let code = '';
+                if (codes.length > 1) {
+                    code = codes[1];
+                } else {
+                    code = codes[0];
+                }
+                const staffs = [SELECTTYPE_NAME_ITEMS[0].cd, SELECTTYPE_NAME_ITEMS[1].cd];
+                const org = [SELECTTYPE_NAME_ITEMS[3].cd, SELECTTYPE_NAME_ITEMS[4].cd];
+                if (staffs.includes(code)) {
+                    return '180px';
+                } else if (org.includes(code)) {
+                    return '120px';
+                } else {
+                    return '100px';
+                }
+            };
+
+            /**
              * 複数選択値の更新
              * @param {string} fieldCode フィールドコード
              * @param {string} value 選択値
-             * @returns {void} この関数は戻りとを利用しない。常にundefinedを返す
+             * @returns {void} この関数は戻りを利用しない。常にundefinedを返す
              */
             const updateMultiSelect = (fieldCode, value) => {
                 if (!STATE.multiSelectFilters[fieldCode]) {
@@ -2752,6 +2881,19 @@
 
                 // 単一選択フィルターも更新（既存機能との互換性）
                 STATE.filters[fieldCode] = selected.length > 0 ? selected[0] : '';
+
+                // 複数選択の幅を設定
+                const doropdown = document.getElementById('dropdown_' + fieldCode);
+                const select = document.getElementById('dropdown_select_' + fieldCode);
+                const observer = new ResizeObserver((entries) => {
+                    if (!select || !doropdown) return;
+                    for (let entry of entries) {
+                        select.style.width = entry.contentRect.width + 'px';
+                    }
+                });
+                if (doropdown) {
+                    observer.observe(doropdown);
+                }
             };
 
             /**
@@ -2782,6 +2924,19 @@
                     // 全選択した場合もバックアップを更新
                     //STATE.previousMultiSelectFilters[fieldCode] = [...allValues];
                 }
+
+                // 複数選択の幅を設定
+                const doropdown = document.getElementById('dropdown_' + fieldCode);
+                const select = document.getElementById('dropdown_select_' + fieldCode);
+                const observer = new ResizeObserver((entries) => {
+                    if (!select || !doropdown) return;
+                    for (let entry of entries) {
+                        select.style.width = entry.contentRect.width + 'px';
+                    }
+                });
+                if (doropdown) {
+                    observer.observe(doropdown);
+                }
             };
 
             /**
@@ -2790,7 +2945,8 @@
              */
             const filteredRows = computed(() => {
                 if (!STATE.listData?.datas || !Array.isArray(STATE.listData.datas)) return [];
-                return STATE.listData.datas.filter((item) => {
+                //let dateKey = '';
+                let filtered = STATE.listData.datas.filter((item) => {
                     return Object.keys(STATE.filters).every((key) => {
                         // 複数選択フィルターがある場合は複数選択を優先
                         const multiSelectValues = STATE.multiSelectFilters[key] || [];
@@ -2861,22 +3017,34 @@
                                 return normalizeString(cellValue) === normalizeString(filterVal);
                             } else {
                                 let wkCellValue = normalizeString(cellValue);
-                                let wkFilterVal = normalizeString(filterVal);
+                                let wkFilterVal = '';
                                 if (STATE.dateFields.includes(key)) {
                                     // 日付フィールドの場合、/や-を除去して比較
+                                    // 範囲指定で比較
+                                    const dateFilter = STATE.filters[key];
+                                    const wkFrom = dateFilter?.from ? dateFilter.from.replace(/[./-]/g, '') : null;
+                                    const wkTo = dateFilter?.to ? dateFilter.to.replace(/[./-]/g, '') : null;
                                     wkCellValue = wkCellValue.replace(/[./-]/g, '');
-                                    wkFilterVal = wkFilterVal.replace(/[./-]/g, '');
+                                    //dateKey = key;
+                                    return (wkFrom ? wkCellValue >= wkFrom : true) && (wkTo ? wkCellValue <= wkTo : true); //.sort((a, b) => a - b);
+                                    //wkFilterVal = wkFilterVal.replace(/[./-]/g, '');
                                 } else if (STATE.deleteHifun.includes(key)) {
                                     // ハイフン除去（郵便番号、電話番号、FAX番号）
+                                    wkFilterVal = normalizeString(filterVal);
                                     wkCellValue = wkCellValue.replace(/-/g, '');
                                     wkFilterVal = wkFilterVal.replace(/-/g, '');
+                                    return wkCellValue.includes(wkFilterVal);
+                                } else {
+                                    wkFilterVal = normalizeString(filterVal);
+                                    return wkCellValue.includes(wkFilterVal);
                                 }
-                                return wkCellValue.includes(wkFilterVal);
                                 //return normalizeString(wkCellValue) === normalizeString(wkFilterVal);
                             }
                         });
                     });
                 });
+                //if (dateKey) sortData(dateKey, true);
+                return filtered;
             });
 
             /**
@@ -3100,7 +3268,8 @@
                 let rc = false;
                 const str = label.replace(/（バックアップ）/, ''); // 数値部分削除
                 // 選択項目
-                const select = SELECTTYPE_NAME_ITEMS.map((item) => item.label);
+                let select = SELECTTYPE_NAME_ITEMS.map((item) => item.label);
+                select = select.filter((item) => item !== SELECTTYPE_NAME_ITEMS[2].label); // 顧客名は除外
                 if (select.includes(str)) {
                     rc = true;
                 } else if (type === 'DROP_DOWN' || type === 'RADIO_BUTTON') {
@@ -3243,30 +3412,37 @@
                     if (wk[0] === '新') {
                         wkKey = datas['pattern'][num - 1][str];
                     } else if (wk[0] === '旧') {
-                        wkKey = datas['pattern'][num - 1]['OLD'][str];
+                        /*console.log('num:', num);
+                        console.log('str:', str);
+                        console.log('datas:', datas);
+                        console.log("datas['pattern']:", datas['pattern']);
+                        console.log("datas['pattern'][num - 1]:", datas['pattern'][num - 1]);
+                        console.log("datas['pattern'][num - 1]['OLD']:", datas['pattern'][num - 1]['OLD']);*/
+                        wkKey = datas['pattern'][num - 1]['OLD'] ? datas['pattern'][num - 1]['OLD'][str] : '';
                     }
                     if (datas[items[index].cd] !== wkKey) {
                         color = CUSTOMER_CHANGE_BACKCOLOR;
                     }
-                }
-
-                // 担当者整合性チェック
-                if (datas['className']) {
-                    if (key === SELECTTYPE_NAME_ITEMS[0].cd) {
-                        color = datas['className']['staff']?.back;
-                    } else if (key === SELECTTYPE_NAME_ITEMS[1].cd) {
-                        color = datas['className']['substaff']?.back;
-                    } else if (key === SELECTTYPE_NAME_ITEMS[3].cd) {
-                        color = datas['className']['staffOrg']?.back;
-                        //console.log('className:', datas['className']);
-                    } else if (key === SELECTTYPE_NAME_ITEMS[4].cd) {
-                        color = datas['className']['substaffOrg']?.back;
+                } else {
+                    // 担当者整合性チェック
+                    if (datas['className']) {
+                        if (key === SELECTTYPE_NAME_ITEMS[0].cd) {
+                            color = datas['className']['staff']?.back;
+                        } else if (key === SELECTTYPE_NAME_ITEMS[1].cd) {
+                            color = datas['className']['substaff']?.back;
+                        } else if (key === SELECTTYPE_NAME_ITEMS[3].cd) {
+                            color = datas['className']['staffOrg']?.back;
+                            //console.log('className:', datas['className']);
+                        } else if (key === SELECTTYPE_NAME_ITEMS[4].cd) {
+                            color = datas['className']['substaffOrg']?.back;
+                        } else {
+                            color = CUSTOMER_NOCHANGE_COLOR;
+                        }
                     } else {
                         color = CUSTOMER_NOCHANGE_COLOR;
                     }
-                } else {
-                    color = CUSTOMER_NOCHANGE_COLOR;
                 }
+
                 return color;
             };
 
@@ -3329,10 +3505,12 @@
                             // バックアップの場合
                             Object.keys(datas).forEach((item) => {
                                 if (item === 'pattern' && index === datas[item][index - 1].index) {
-                                    rc = datas[item][index - 1]['OLD'][wkCodes[1]];
+                                    if (datas[item][index - 1]['OLD']) {
+                                        rc = datas[item][index - 1]['OLD'][wkCodes[1]];
+                                        flg = true;
+                                    }
                                 }
                             });
-                            flg = true;
                         }
                     }
                 }
@@ -3430,7 +3608,48 @@
                         valB = b.datas?.[code] ?? '';
                     }
 
-                    // 数値かどうかをチェック
+                    // 日付フィールドかどうかをチェック
+                    const isDateField = STATE.dateFields.includes(code);
+
+                    if (isDateField) {
+                        // 日付フィールドの場合、ハイフンやスラッシュを除去して比較
+                        const dateA = String(valA).replace(/[./-]/g, '') || '';
+                        const dateB = String(valB).replace(/[./-]/g, '') || '';
+
+                        // 空文字列の処理
+                        if (dateA === '' && dateB === '') return 0;
+                        if (dateA === '') return isAsc ? 1 : -1;
+                        if (dateB === '') return isAsc ? -1 : 1;
+
+                        // 日付の数値比較（YYYYMMDDの形式で比較）
+                        const numA = parseInt(dateA);
+                        const numB = parseInt(dateB);
+                        return isAsc ? numA - numB : numB - numA;
+                    } else {
+                        // 数値かどうかをチェック
+                        const numA = parseFloat(valA);
+                        const numB = parseFloat(valB);
+                        const isNumeric = !isNaN(numA) && !isNaN(numB) && valA !== '' && valB !== '';
+
+                        if (isNumeric) {
+                            // 数値の場合
+                            return isAsc ? numA - numB : numB - numA;
+                        } else {
+                            // 文字列の場合（空文字列は最後にソート）
+                            const strA = String(valA);
+                            const strB = String(valB);
+
+                            // 空文字列の処理
+                            if (strA === '' && strB === '') return 0;
+                            if (strA === '') return isAsc ? 1 : -1;
+                            if (strB === '') return isAsc ? -1 : 1;
+
+                            // 日本語対応のロケール比較
+                            return isAsc ? String(valA).localeCompare(String(valB), 'ja') : String(valB).localeCompare(String(valA), 'ja');
+                        }
+                    }
+                });
+                /*// 数値かどうかをチェック
                     const numA = parseFloat(valA);
                     const numB = parseFloat(valB);
                     const isNumeric = !isNaN(numA) && !isNaN(numB) && valA !== '' && valB !== '';
@@ -3453,7 +3672,7 @@
                         //? strA.localeCompare(strB, 'ja', { numeric: true, sensitivity: 'base' })
                         //: strB.localeCompare(strA, 'ja', { numeric: true, sensitivity: 'base' });
                     }
-                });
+                });*/
 
                 STATE.sortOrder = { field: code, asc: isAsc }; // ソート情報をリセット
             };
@@ -3467,10 +3686,11 @@
                 const keys = Object.keys(CONF).filter((key) => key !== 'apps' && key !== 'radOrg');
                 const cd = PATTERN_NAME_ITEMS.map((item) => item.cd);
                 //console.log('keys:', keys);
+                //const key = 'tableFields';
                 keys.forEach((key) => {
                     CONF[key].forEach((field) => {
                         //console.log(key, ':', field.code);
-                        if (!EXCLUDE_FIELDS.some((item) => item.cd === field.code) && !fields.includes(field.code)) {
+                        if (!EXCLUDE_FIELDS.some((item) => item === field.code) && !fields.includes(field.code)) {
                             // 所属でなく、かつ重複しない場合のみ追加
                             fields.push(field.code);
                             items.push({ code: field.code, label: field.label, type: field.type ?? '' });
@@ -3495,9 +3715,11 @@
                 // 項目名の設定
                 STATE.listData = { items: items };
                 STATE.filters = items.reduce((acc, item) => {
-                    acc[item.code] = '';
                     if (item.type === 'DATE') {
                         STATE.dateFields.push(item.code);
+                        acc[item.code] = { from: null, to: null };
+                    } else {
+                        acc[item.code] = '';
                     }
                     return acc;
                 }, {});
@@ -3512,42 +3734,57 @@
                     fields.push(PATTERN_NAME_ITEMS[1].cd);
                     PATTERN_NAME_ITEMS[1].label = PATTERN_NAME_ITEMS[1].cd;
                 } else {
-                    itemCount++;
+                    //itemCount++;
                 }
+                if (fields.indexOf(PATTERN_NAME_ITEMS[2].cd) === -1) {
+                    fields.push(PATTERN_NAME_ITEMS[2].cd);
+                    PATTERN_NAME_ITEMS[2].label = PATTERN_NAME_ITEMS[2].cd;
+                } else {
+                    //itemCount++;
+                }
+
                 if (fields.indexOf(PATTERN_NAME_ITEMS[3].cd) === -1) {
                     fields.push(PATTERN_NAME_ITEMS[3].cd);
                     PATTERN_NAME_ITEMS[3].label = PATTERN_NAME_ITEMS[3].cd;
                 } else {
-                    itemCount++;
+                    //itemCount++;
                 }
+                if (fields.indexOf(PATTERN_NAME_ITEMS[4].cd) === -1) {
+                    fields.push(PATTERN_NAME_ITEMS[4].cd);
+                    PATTERN_NAME_ITEMS[4].label = PATTERN_NAME_ITEMS[4].cd;
+                } else {
+                    //itemCount++;
+                }
+
                 STATE.listData.items.push({ code: SELECTTYPE_NAME_ITEMS[0].cd, label: SELECTTYPE_NAME_ITEMS[0].label, type: '' });
                 STATE.listData.items.push({ code: SELECTTYPE_NAME_ITEMS[1].cd, label: SELECTTYPE_NAME_ITEMS[1].label, type: '' });
                 STATE.filters[SELECTTYPE_NAME_ITEMS[0].cd] = '';
                 STATE.filters[SELECTTYPE_NAME_ITEMS[1].cd] = '';
 
                 // 担当者　副担当者　が選択されていた場合
-                let count = fields.filter((field) => field === PATTERN_NAME_ITEMS[2].cd).length;
-                if (count > 1) {
-                    itemCount++;
-                }
-                count = fields.filter((field) => field === PATTERN_NAME_ITEMS[4].cd).length;
-                if (count > 1) {
-                    itemCount++;
-                }
+                //itemCount += 0;
+                //let count = fields.filter((field) => field === PATTERN_NAME_ITEMS[2].cd).length;
+                //if (count > 1) {
+                //itemCount++;
+                //}
+                //count = fields.filter((field) => field === PATTERN_NAME_ITEMS[4].cd).length;
+                //if (count > 1) {
+                //itemCount++;
+                //}
 
                 // 顧客コード　顧客名　は必ず追加
                 if (fields.indexOf(PATTERN_NAME_ITEMS[5].cd) === -1) {
                     fields.push(PATTERN_NAME_ITEMS[5].cd);
                     PATTERN_NAME_ITEMS[5].label = PATTERN_NAME_ITEMS[5].cd;
                 } else {
-                    itemCount++;
+                    //itemCount++;
                 }
 
                 if (fields.indexOf(PATTERN_NAME_ITEMS[6].cd) === -1) {
                     fields.push(PATTERN_NAME_ITEMS[6].cd);
                     PATTERN_NAME_ITEMS[6].label = PATTERN_NAME_ITEMS[6].cd;
                 } else {
-                    itemCount++;
+                    //itemCount++;
                 }
                 STATE.listData.items.push({ code: SELECTTYPE_NAME_ITEMS[2].cd, label: SELECTTYPE_NAME_ITEMS[2].label, type: '' });
                 STATE.filters[SELECTTYPE_NAME_ITEMS[2].cd] = '';
@@ -3557,12 +3794,12 @@
                 if (fields.indexOf(ORG_ITEM[0]) === -1) {
                     fields.push(ORG_ITEM[0]);
                 } else {
-                    itemCount++;
+                    //itemCount++;
                 }
                 if (fields.indexOf(ORG_ITEM[1]) === -1) {
                     fields.push(ORG_ITEM[1]);
                 } else {
-                    itemCount++;
+                    //itemCount++;
                 }
                 PATTERN_NAME_ITEMS[7].label = PATTERN_NAME_ITEMS[7].cd;
                 PATTERN_NAME_ITEMS[8].label = PATTERN_NAME_ITEMS[8].cd;
@@ -3581,12 +3818,37 @@
                     //itemCount++;
                 }
 
-                // 項目の並び順を変更する
                 // 「顧客名」「担当者」「担当者所属」「副担当者」「副担当者所属」の順序にし、それ以外はこの順序の後に表示する
-                const orderKeys = SELECTTYPE_NAME_ITEMS.slice()
+                /*const orderKeys = SELECTTYPE_NAME_ITEMS.slice()
                     .sort((a, b) => a.index - b.index)
                     .map((item) => item.cd);
-                STATE.listData.items = [...orderKeys.map((key) => STATE.listData.items.find((item) => item.code === key)).filter(Boolean), ...STATE.listData.items.filter((item) => !orderKeys.includes(item.code))];
+                STATE.listData.items = [...orderKeys.map((key) => STATE.listData.items.find((item) => item.code === key)).filter(Boolean), ...STATE.listData.items.filter((item) => !orderKeys.includes(item.code))];*/
+                // 項目の並び順を変更する
+                // CONF['tableFields']の配列順に従ってSTATE.listData.itemsを並び替える
+                // フィールドコードのマッピング（CONF['tableFields']のコード → STATE.listData.itemsのコード）
+                const fieldCodeMapping = {
+                    [PATTERN_NAME_ITEMS[6].cd]: SELECTTYPE_NAME_ITEMS[2].cd, // 顧客名 → 顧客コード名
+                    [PATTERN_NAME_ITEMS[2].cd + '名']: SELECTTYPE_NAME_ITEMS[0].cd, // 担当者名 → 担当者コード名
+                    [PATTERN_NAME_ITEMS[8].cd]: SELECTTYPE_NAME_ITEMS[3].cd, // 担当者所属 → 担当者所属コード名
+                    [PATTERN_NAME_ITEMS[4].cd + '名']: SELECTTYPE_NAME_ITEMS[1].cd, // 副担当者名 → 副担当者コード名
+                    [PATTERN_NAME_ITEMS[10].cd]: SELECTTYPE_NAME_ITEMS[4].cd, // 副担当者所属 → 副担当者所属コード名
+                };
+
+                // CONF['tableFields']の順序に基づいて並び替え
+                const orderedItems = [];
+                //const processedCodes = new Set();
+
+                CONF['tableFields'].forEach((field) => {
+                    const mappedCode = fieldCodeMapping[field.code] || field.code;
+                    const item = STATE.listData.items.find((listItem) => listItem.code === mappedCode);
+                    if (item) {
+                        orderedItems.push(item);
+                        //processedCodes.add(mappedCode);
+                    }
+                });
+                //const remainingItems = STATE.listData.items.filter((item) => !processedCodes.has(item.code));
+                STATE.listData.items = [...orderedItems];
+                //STATE.listData.items = [...orderedItems, ...remainingItems];
 
                 // レコード取得
                 try {
@@ -3627,10 +3889,13 @@
 
                         // 担当者コード　副担当者コードがなかった場合、追加
                         items[i].datas[PATTERN_NAME_ITEMS[1].cd] = rec[PATTERN_NAME_ITEMS[1].cd].value;
-
                         items[i].datas[PATTERN_NAME_ITEMS[3].cd] = rec[PATTERN_NAME_ITEMS[3].cd].value;
 
-                        // 担当者・副担当者・顧客名の[コード] 名称を追加
+                        // 担当者名称　副担当者名称、追加
+                        items[i].datas[PATTERN_NAME_ITEMS[2].cd] = rec[PATTERN_NAME_ITEMS[2].cd].value;
+                        items[i].datas[PATTERN_NAME_ITEMS[4].cd] = rec[PATTERN_NAME_ITEMS[4].cd].value;
+
+                        // 担当者[コード] 名称を追加
                         let wkcode = rec[PATTERN_NAME_ITEMS[1].cd]?.value ?? '';
                         let wkname = rec[PATTERN_NAME_ITEMS[2].cd]?.value ?? '';
                         if (wkcode !== '' && wkname !== '') {
@@ -3639,7 +3904,7 @@
                             items[i].datas[SELECTTYPE_NAME_ITEMS[0].cd] = '';
                         }
 
-                        // 副担当者
+                        // 副担当者[コード] 名称を追加
                         wkcode = rec[PATTERN_NAME_ITEMS[3].cd]?.value ?? '';
                         wkname = rec[PATTERN_NAME_ITEMS[4].cd]?.value ?? '';
                         if (wkcode !== '' && wkname !== '') {
@@ -3695,7 +3960,7 @@
                         }
 
                         // 決算月
-                        items[i].datas[CUSTOMERCHART_FIELD.fiscalMonth.cd] = rec[CUSTOMERCHART_FIELD.fiscalMonth.cd]?.value ?? -1;
+                        items[i].datas[CUSTOMERCHART_FIELD.fiscalMonth.cd] = rec[CUSTOMERCHART_FIELD.fiscalMonth.cd]?.value ?? '';
 
                         // 担当者アカウント
                         if (rec[CUSTOMERCHART_FIELD.staffAccount.cd] && rec[CUSTOMERCHART_FIELD.staffAccount.cd].value.length !== 0) {
@@ -3759,7 +4024,8 @@
                     });
 
                     STATE.listData.datas = items;
-                    STATE.itemLength = STATE.listData.items.length - itemCount - 2;
+                    //STATE.itemLength = STATE.listData.items.length - itemCount - 2;
+                    STATE.itemLength = STATE.listData.items.length;
                     //STATE.itemLength = STATE.listData.items.length - 2;
                     STATE.listTotal = { staff: totalStaff, org: totalOrg };
 
@@ -4091,7 +4357,8 @@
                 // 初期表示時に全ての複数選択フィルターを全選択状態にする
                 STATE.listData.items.forEach((item) => {
                     // 単一選択フィールドとテキスト入力フィールドを除外
-                    if (!isSingleSelect(item.code) && isSelectType(item.label, item.type)) {
+                    //if (!isSingleSelect(item.code) && isSelectType(item.label, item.type)) {
+                    if (isSelectType(item.label, item.type)) {
                         const allOptions = getUniqueOptions(item.code);
                         const allValues = [...allOptions.map((opt) => opt.value), EMPTY.value];
                         STATE.multiSelectFilters[item.code] = allValues;
@@ -4141,7 +4408,9 @@
                 toggleMultiSelect,
                 updateMultiSelect,
                 clearAllSelections,
-                isSingleSelect,
+                //isSingleSelect,
+                getWidthMultiSelect,
+                setMinWidth,
             };
         },
         template: /* HTML */ `
@@ -4174,48 +4443,52 @@
                                     <div>
                                         <!-- 追加したあと、データにすべてを設定する -->
                                         <template v-if="!(isSelectType(field.label,field.type))">
-                                            <input type="text" v-model="STATE.filters[field.code]" />
+                                            <template v-if="field.type!=='DATE'">
+                                                <input type="text" v-model="STATE.filters[field.code]" />
+                                            </template>
+                                            <template v-else><input type="date" v-model="STATE.filters[field.code].from" />～<input type="date" v-model="STATE.filters[field.code].to" /></template>
                                         </template>
                                         <template v-else>
                                             <!-- 単一選択フィールド -->
-                                            <template v-if="isSingleSelect(field.code)">
+                                            <!--<template v-if="isSingleSelect(field.code)">
                                                 <select v-model="STATE.filters[field.code]">
                                                     <option value="">すべて</option>
                                                     <option v-for="option in getUniqueOptions(field.code)" :key="option.value" :value="option.value">{{ option.label }}</option>
                                                     <option value="__EMPTY__">未設定</option>
                                                 </select>
-                                            </template>
+                                            </template>-->
 
                                             <!-- 複数選択フィールド -->
-                                            <template v-else>
-                                                <!-- ドロップダウン切り替えボタン -->
-                                                <div class="multi-select-container">
-                                                    <button type="button" @click="toggleMultiSelect(field.code)" class="multi-select-button">
-                                                        <span v-if="STATE.multiSelectFilters[field.code] && STATE.multiSelectFilters[field.code].length > 0">{{ getSelectedMultiValues(field.code) }}</span>
-                                                        <span v-else>すべて</span>
-                                                        <span class="multi-select-arrow">{{ STATE.showMultiSelect[field.code] ? '▲' : '▼' }}</span>
-                                                    </button>
+                                            <!--<template v-else>-->
+                                            <!-- ドロップダウン切り替えボタン -->
+                                            <div :id="'dropdown_' + field.code" class="multi-select-container" :style="{ minWidth: setMinWidth(field.code) }">
+                                                <button type="button" @click="toggleMultiSelect(field.code)" class="multi-select-button">
+                                                    <span v-if="STATE.multiSelectFilters[field.code] && STATE.multiSelectFilters[field.code].length > 0">{{ getSelectedMultiValues(field.code) }}</span>
+                                                    <span v-else>すべて</span>
+                                                    <span class="multi-select-arrow">{{ STATE.showMultiSelect[field.code] ? '▲' : '▼' }}</span>
+                                                </button>
 
-                                                    <!-- 複数選択ドロップダウン -->
-                                                    <div v-if="STATE.showMultiSelect[field.code]" class="multi-select-dropdown">
-                                                        <label class="multi-select-option" @click.stop>
-                                                            <input type="checkbox" :checked="STATE.multiSelectFilters[field.code] && STATE.multiSelectFilters[field.code].length > 0 && getUniqueOptions(field.code).every(opt => STATE.multiSelectFilters[field.code].includes(opt.value)) && STATE.multiSelectFilters[field.code].includes('__EMPTY__')" @change="clearAllSelections(field.code)" />
-                                                            すべて<!-- {{STATE.multiSelectFilters[field.code]}}: {{STATE.multiSelectFilters[field.code]?STATE.multiSelectFilters[field.code].length > 0:'lengthなし'}}: {{STATE.multiSelectFilters[field.code]?getUniqueOptions(field.code).every(opt => STATE.multiSelectFilters[field.code].includes(opt.value)):'everyなし'}}:
-                                                            {{STATE.multiSelectFilters[field.code]?STATE.multiSelectFilters[field.code].includes('__EMPTY__'):'EMPTYなし'}}-->
-                                                        </label>
+                                                <!-- 複数選択ドロップダウン -->
+                                                <div :id="'dropdown_select_' + field.code" v-if="STATE.showMultiSelect[field.code]" class="multi-select-dropdown" :style="{ width: getWidthMultiSelect('dropdown_' + field.code,'dropdown_select_' + field.code) }">
+                                                    <label class="multi-select-option" @click.stop>
+                                                        <input type="checkbox" :checked="STATE.multiSelectFilters[field.code] && STATE.multiSelectFilters[field.code].length > 0 && getUniqueOptions(field.code).every(opt => STATE.multiSelectFilters[field.code].includes(opt.value)) && STATE.multiSelectFilters[field.code].includes('__EMPTY__')" @change="clearAllSelections(field.code)" />
+                                                        すべて
+                                                        <!--{{STATE.multiSelectFilters[field.code]}}: {{STATE.multiSelectFilters[field.code]?STATE.multiSelectFilters[field.code].length > 0:'lengthなし'}}: {{STATE.multiSelectFilters[field.code]?getUniqueOptions(field.code).every(opt => STATE.multiSelectFilters[field.code].includes(opt.value)):'everyなし'}}:
+                                                        {{STATE.multiSelectFilters[field.code]?STATE.multiSelectFilters[field.code].includes('__EMPTY__'):'EMPTYなし'}}-->
+                                                    </label>
 
-                                                        <label v-for="option in getUniqueOptions(field.code)" :key="option.value" class="multi-select-option" @click.stop>
-                                                            <input type="checkbox" :checked="STATE.multiSelectFilters[field.code] && STATE.multiSelectFilters[field.code].includes(option.value)" @change="updateMultiSelect(field.code, option.value)" />
-                                                            {{ option.label }}
-                                                        </label>
+                                                    <label v-for="option in getUniqueOptions(field.code)" :key="option.value" class="multi-select-option" @click.stop>
+                                                        <input type="checkbox" :checked="STATE.multiSelectFilters[field.code] && STATE.multiSelectFilters[field.code].includes(option.value)" @change="updateMultiSelect(field.code, option.value)" />
+                                                        {{ option.label }}
+                                                    </label>
 
-                                                        <label class="multi-select-option" @click.stop>
-                                                            <input type="checkbox" :checked="STATE.multiSelectFilters[field.code] && STATE.multiSelectFilters[field.code].includes('__EMPTY__')" @change="updateMultiSelect(field.code, '__EMPTY__')" />
-                                                            未設定
-                                                        </label>
-                                                    </div>
+                                                    <label class="multi-select-option" @click.stop>
+                                                        <input type="checkbox" :checked="STATE.multiSelectFilters[field.code] && STATE.multiSelectFilters[field.code].includes('__EMPTY__')" @change="updateMultiSelect(field.code, '__EMPTY__')" />
+                                                        未設定
+                                                    </label>
                                                 </div>
-                                            </template>
+                                            </div>
+                                            <!--</template>-->
                                         </template>
                                     </div>
                                 </th>

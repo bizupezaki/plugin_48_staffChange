@@ -17,7 +17,13 @@
     button {
         white-space: nowrap;
     }
-    
+    input[type="text"] {
+        //padding: 2px 4px;
+        width: 100%;
+        //min-width: 80px;
+        //max-width: 200px;
+    }
+
     #bz_header {
         position: sticky;
         top: var(--top);
@@ -54,6 +60,8 @@
             a.underline {
                 text-decoration: underline;
             }
+
+            //min-width: 100px
         }
 
         tr {
@@ -81,6 +89,7 @@
 
     .multi-select-button {
         width: 100%;
+        //min-width: 150px;
         text-align: left;
         padding: 4px 20px 4px 4px;
         border: 1px solid #ccc;

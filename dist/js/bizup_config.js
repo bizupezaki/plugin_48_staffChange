@@ -28,14 +28,38 @@
     const app = Vue.createApp({
         setup() {
             const tableFieldsDef = [
-                { code: '顧客コード', label: '顧客コード' },
                 { code: '顧客名', label: '顧客名' },
+                { code: '担当者名', label: '担当者名' },
+                { code: '担当者所属', label: '担当者所属' },
+                { code: '副担当者名', label: '副担当者名' },
+                { code: '副担当者所属', label: '副担当者所属' },
                 { code: 'ドロップダウン_法人個人区分', label: '法・個区分' },
                 { code: '契約ステータス', label: '契約ステータス' },
                 { code: 'ドロップダウン_決算月', label: '決算月' },
                 { code: '契約開始日', label: '契約開始日' },
                 { code: '契約完了日', label: '契約終了日' },
             ];
+
+            // 一覧表示固定用
+            const fixedTableFields = [
+                { code: '顧客コード', label: '顧客コード' },
+                { code: '顧客名', label: '顧客名' },
+                { code: '担当者コード', label: '担当者コード' },
+                { code: '担当者', label: '担当者' },
+                { code: 'チーム', label: 'チーム' },
+                { code: '副担当者コード', label: '副担当者コード' },
+                { code: '副担当者', label: '副担当者' },
+                { code: '副チーム', label: '副担当者所属' },
+            ];
+
+            // 追加項目の削除ボタン表示・非表示制御用
+            const deleteBtnDisabledity = {
+                customer: { code: '顧客名', name: '顧客名', type: '', disable: false },
+                staff: { code: '担当者名', name: '担当者名', type: '', disable: false },
+                staffOrg: { code: '担当者所属', name: '担当者所属', type: '', disable: false },
+                subStaff: { code: '副担当者名', name: '副担当者名', type: '', disable: false },
+                subStaffOrg: { code: '副担当者所属', name: '副担当者所属', type: '', disable: false },
+            };
 
             /** プラグインに格納するデータ */
             const DATA = reactive({
@@ -122,7 +146,14 @@
                     if (Object.hasOwn(field, 'lookup') && Number(field.lookup.relatedApp.app) === Number(DATA.apps.STAFF_APP_ID)) {
                         staffFields.push(field);
                     }
-                    if (field.type !== 'REFERENCE_TABLE') {
+                    // REFERENCE_TABLEは除外
+                    // 顧客コード・顧客名・担当者コード・担当者名・担当者所属・副担当者コード・副担当者名・副担当者所属　は除外
+                    let excludeCodes = [];
+                    for (let i = 0; i < fixedTableFields.length; i++) {
+                        excludeCodes.push(fixedTableFields[i].code);
+                    }
+                    if (field.type !== 'REFERENCE_TABLE' && !excludeCodes.includes(field.code)) {
+                        //if (field.type !== 'REFERENCE_TABLE') {
                         preAllFields.push(field);
                     }
                 });
@@ -167,6 +198,20 @@
                         tf.type = found.type;
                     }
                 });
+
+                // 新たに追加（顧客名、担当者名、担当者所属、副担当者、副担当者所属）
+                // DATA.tableFieldsに同じコードがなかった時のみ追加
+                const itemsToAdd = [
+                    { code: deleteBtnDisabledity.customer.code, label: deleteBtnDisabledity.customer.name, type: '' },
+                    { code: deleteBtnDisabledity.staff.code, label: deleteBtnDisabledity.staff.name, type: '' },
+                    { code: deleteBtnDisabledity.staffOrg.code, label: deleteBtnDisabledity.staffOrg.name, type: '' },
+                    { code: deleteBtnDisabledity.subStaff.code, label: deleteBtnDisabledity.subStaff.name, type: '' },
+                    { code: deleteBtnDisabledity.subStaffOrg.code, label: deleteBtnDisabledity.subStaffOrg.name, type: '' },
+                ];
+                const itemsToAddFiltered = itemsToAdd.filter((item) => !DATA.tableFields.some((field) => field.code === item.code));
+                if (itemsToAddFiltered.length > 0) {
+                    DATA.tableFields.splice(0, 0, ...itemsToAddFiltered);
+                }
 
                 // 顧客カルテのアプリのフォームレイアウトデータを取得
                 const customerLayoutData = await client.app.getFormLayout({ app: DATA.apps.CUSTOMER_APP_ID });
@@ -229,6 +274,18 @@
                 DATA.tableFields.splice(index, 1);
             };
 
+            // 削除ボタンを非表示にする
+            const disableDeleteBtn = (code) => {
+                let rc = false;
+                for (let key in deleteBtnDisabledity) {
+                    if (deleteBtnDisabledity[key].code === code) {
+                        rc = true;
+                        break;
+                    }
+                }
+                return rc;
+            };
+
             // デフォルトに戻す
             const setDefault = () => {
                 Swal.fire({
@@ -254,6 +311,7 @@
                 removeTableField,
                 availableFields,
                 setDefault,
+                disableDeleteBtn,
             };
         },
         components: {
@@ -303,7 +361,7 @@
                                     <td>{{ field.label }}</td>
                                     <td>{{ field.code }}</td>
                                     <td>{{ field.type }}</td>
-                                    <td><button class="bz_bt_def bz_bt_mini" @click="removeTableField(index)" :disabled="DATA.tableFields.length === 1">削除</button></td>
+                                    <td><button class="bz_bt_def bz_bt_mini" @click="removeTableField(index)" :disabled="disableDeleteBtn(field.code) || DATA.tableFields.length === 1">:削除</button></td>
                                 </tr>
                             </draggable>
                         </table>
