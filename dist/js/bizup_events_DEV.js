@@ -187,6 +187,7 @@
                 previousMultiSelectFilters: {}, // 前回の複数選択フィルター値
                 dateFields: [], // 日付フィールド
                 deleteHifun: [CUSTOMERCHART_FIELD.postalCode.cd, CUSTOMERCHART_FIELD.tel.cd, CUSTOMERCHART_FIELD.fax.cd], // ハイフン削除用
+                computedWidth: {}, // 計算フィールド
                 //filtersDate: { from: null, to: null },
             });
 
@@ -4327,11 +4328,6 @@
                     });
                 }
 
-                // stickyヘッダー対応
-                nextTick(() => {
-                    bizupUtil.common.setStickyHeaderHeight(CONTAINER_ID, '');
-                });
-
                 // 外側クリックでドロップダウンを閉じる
                 document.addEventListener('click', (event) => {
                     const dropdowns = document.querySelectorAll('.multi-select-container');
@@ -4364,6 +4360,23 @@
                         STATE.multiSelectFilters[item.code] = allValues;
                         //STATE.filters[item.code] = allValues[0] || '';
                     }
+                });
+
+                // stickyヘッダー対応
+                nextTick(() => {
+                    // input[text]の幅を設定
+                    const inputs = document.querySelectorAll('input[type="text"]');
+                    inputs.forEach((input) => {
+                        const parentTh = input.closest('th');
+                        if (parentTh !== null) {
+                            //STATE.computedWidth[input.id] = parentTh.offsetWidth - 16; // パディング分を引く
+                            input.style.width = parentTh.offsetWidth - 16 + 'px'; // パディング分を引く
+                            input.style.visibility = 'visible';
+                            console.log(parentTh.offsetWidth);
+                        }
+                    });
+
+                    bizupUtil.common.setStickyHeaderHeight(CONTAINER_ID, '');
                 });
 
                 console.log('STATE:', STATE);
@@ -4444,7 +4457,7 @@
                                         <!-- 追加したあと、データにすべてを設定する -->
                                         <template v-if="!(isSelectType(field.label,field.type))">
                                             <template v-if="field.type!=='DATE'">
-                                                <input type="text" v-model="STATE.filters[field.code]" />
+                                                <div class="cell-flex"><input type="text" :id="'input_' + field.code" v-model="STATE.filters[field.code]" /><!--:style="{width:STATE.computedWidth['input_' + field.code] + 'px', visibility: 'visible'}"--></div>
                                             </template>
                                             <template v-else><input type="date" v-model="STATE.filters[field.code].from" />～<input type="date" v-model="STATE.filters[field.code].to" /></template>
                                         </template>
