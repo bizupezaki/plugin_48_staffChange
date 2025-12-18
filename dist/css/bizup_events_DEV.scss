@@ -94,16 +94,6 @@
             }
         }
     }
-    .sort-btn {
-        cursor: pointer;
-        font-size: 13px;
-        margin-left: 4px;
-        color: #888888;
-    }
-    .sort-btn.active {
-        color: #0000ff;
-        font-weight: bold;
-    }
 
     // 複数選択ドロップダウン関連スタイル
     .multi-select-container {
@@ -188,4 +178,16 @@
         //font-size:1em;
         //line-height:1;
     }*/
+}
+
+.sort-btn {
+    cursor: pointer;
+    font-size: 13px;
+    margin-left: 4px;
+    color: #888888;
+}
+
+.sort-btn.active {
+    color: #0000ff;
+    font-weight: bold;
 }
