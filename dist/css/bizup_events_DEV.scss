@@ -1,8 +1,13 @@
 #bz_update_staffs_container_DEV {
+    $fixed-cols: 5; // SCSS variable for static usage in nth-child
     --hc-height: 0px;
-    --top: 48px;
+    --top: 48px; // 48px ヘッダー高さ分
+    --col-width: 0px;
+    --fixed-cols: #{$fixed-cols}; // Use SCSS variable
+    --left: 0px;
 
     margin: 20px;
+
     &,
     * {
         box-sizing: border-box;
@@ -14,51 +19,42 @@
     button {
         vertical-align: middle;
     }
+
     button {
         white-space: nowrap;
     }
+
     input[type="text"] {
-        //padding: 2px 4px;
-        //flex: 1 1 auto;
         width: 0px;
         visibility: hidden;
-        ///min-width: 0;
-        //box-sizing: border-box;
-        //display:block;
-        
-        
-        //max-width: 100%;
-        //overflow: hidden;
-        //text-overflow: ellipsis;
-        //white-space: nowrap;
-        //flex-shrink: 0;
-
     }
 
-    #bz_header {
+    #bz_header_buttons {
         position: sticky;
         top: var(--top);
         background: #ffffff;
-        z-index: 1;
+        z-index: 20;
     }
 
     table.bz_table_def {
         border-collapse: separate;
         border-spacing: 0;
 
-        border-top: 1px solid #999;
-        border-left: 1px solid #999;
+        border-top: 1px solid #999999;
+        border-left: 1px solid #999999;
+        background: #ffffff;
 
-        //table-layout: fixed;
-        //width: 100%;
+        white-space: nowrap;
 
         thead {
-            background-color: #eee;
+            background-color: #eeeeee;
 
             position: sticky;
             border-collapse: separate;
             top: calc(var(--hc-height) + var(--top));
-            z-index: 2;
+            z-index: 20;
+
+            white-space: nowrap;
         }
 
         th,
@@ -66,33 +62,48 @@
             border-top-style: none;
             border-left-style: none;
             white-space: nowrap;
-            //overflow: hidden;
-            //white-space:normal;
-            
-
-            //display:flex;
-            //width:90px;
-            //min-width:80px;
-            //max-width: 2500px; // 必要に応じて調整
-            //overflow: hidden;
-            //text-overflow:ellipsis;
-
+            border-collapse: separate;
+            background: #ffffff;
+ 
             a.no-color-change {
                 color: inherit;
             }
-        
+
             a.underline {
                 text-decoration: underline;
             }
+        }
 
-            //min-width: 100px
+        th:nth-child(n):nth-child(-n+#{$fixed-cols}),
+        td:nth-child(n):nth-child(-n+#{$fixed-cols}) {
+            z-index: 3;
+            border-right: 1px solid #999999;
+        }
+
+        th:nth-child(1),
+        td:nth-child(1) {
+            left: calc(var(--col-width) * 0);
+            z-index: 4;
         }
 
         tr {
             &.bz_tr_diselect {
-                background-color: #ccc;
+                background-color: #cccccc;
             }
         }
+
+    }
+
+    .items-header {
+        background-color: #eeeeee !important;
+        z-index: 30;
+        box-shadow: 1px 0 0 0 #eeeeee; // 左右の隙間を埋める
+    }
+
+    .items-body {
+        background: #ffffff;
+        z-index: 1;
+        box-shadow: 1px 0 0 0 #ffffff; // 左右の隙間を埋める
     }
 
     // 複数選択ドロップダウン関連スタイル
@@ -103,23 +114,19 @@
 
     .multi-select-button {
         width: 100%;
-        //min-width: 150px;
         text-align: left;
         padding: 4px 20px 4px 4px;
-        border: 1px solid #ccc;
+        border: 1px solid #cccccc;
         background: white;
         cursor: pointer;
         position: relative;
-        //white-space: nowrap;
-        //overflow: hidden;
-        //text-overflow: ellipsis;
     }
 
     .multi-select-arrow {
         position: absolute;
         right: 4px;
         top: 50%;
-        transform: translateY(-50%);    //縦中央
+        transform: translateY(-50%); //縦中央
     }
 
     .multi-select-dropdown {
@@ -128,11 +135,11 @@
         left: 0;
         min-width: 100px;
         background: white;
-        border: 1px solid #ccc;
+        border: 1px solid #cccccc;
         border-top: none;
         max-height: 200px;
         overflow-y: auto;
-        z-index: 1000;
+        z-index: 0;
     }
 
     .multi-select-option {
@@ -141,7 +148,7 @@
         cursor: pointer;
         font-size: 12px;
         text-align: left;
-        border-top: 1px solid #eee;
+        border-top: 1px solid #eeeeee;
 
         &:first-child {
             border-top: none;
@@ -150,34 +157,7 @@
         input[type="checkbox"] {
             margin-right: 4px;
         }
-    }   
-    //.cell-flex {
-        //display:block;
-    //}
-    /*.cell-flex input[type="text"] {
-        width:100% !important;
-        min-width:0 !important;
-        max-width:100% !important;
-        box-sizing:border-box;
-        //display: block;
-        overflow:hidden;
-        text-overflow:ellipsis;
-        min-width:0!important;
-        //min-height:0;
-        width: 100%;
-        
-        //padding:0;
-        //border:0;
-        //margin:0;
-        //line-height:1;
-        //height:auto;
-        //box-sizing: border-box;
-        //border:none;
-        //width:10px;
-        //height:10px;
-        //font-size:1em;
-        //line-height:1;
-    }*/
+    }
 }
 
 .sort-btn {
@@ -190,4 +170,14 @@
 .sort-btn.active {
     color: #0000ff;
     font-weight: bold;
+}
+
+button.bz_bt_def.bz_bt_cancel {
+    background-color: #6e7881;
+    border-color: #6e7881;
+    color: #fff;
+
+    &:hover {
+        background-color: #5a6268;
+    }
 }
