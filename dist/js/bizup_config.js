@@ -86,14 +86,25 @@
 
             /** 保存 */
             const saveConf = () => {
-                let errors = false;
+                let errors = 0;
                 if (DATA.staffFields.filter((f) => f.use).length === 0) {
-                    errors = true;
+                    errors = 1;
+                } else if (!DATA.tableFields.some((f) => f.initialDisplay)) {
+                    // initialDisplayが一つもONになっていない場合
+                    errors = 2;
                 }
-                if (errors > 0) {
+
+                if (errors) {
+                    let msg = '';
+                    if (errors === 1) {
+                        msg = `担当者として使用するフィールドが一つも選択されていません。<br>最低一つは選択してください。`;
+                    } else if (errors === 2) {
+                        msg = `一覧に表示するフィールドの「初期表示」が一つも選択されていません。<br>初期表示する項目を最低一つは選択してください。`;
+                    }
+
                     Swal.fire({
                         title: '設定項目エラー',
-                        html: `担当者として使用するフィールドが一つも選択されていません。<br>最低一つは選択してください。`,
+                        html: msg,
                         icon: 'error',
                         toast: true,
                         position: 'top',
@@ -188,6 +199,10 @@
                         tf.label = found.label;
                         tf.type = found.type;
                     }
+                    // initialDisplayの初期化
+                    if (tf.initialDisplay === undefined) {
+                        tf.initialDisplay = true;
+                    }
                 });
 
                 // tableFieldsDef にもtype情報を付与してlabelも最新に更新
@@ -202,11 +217,11 @@
                 // 新たに追加（顧客名、担当者名、担当者所属、副担当者、副担当者所属）
                 // DATA.tableFieldsに同じコードがなかった時のみ追加
                 const itemsToAdd = [
-                    { code: deleteBtnDisabledity.customer.code, label: deleteBtnDisabledity.customer.name, type: '' },
-                    { code: deleteBtnDisabledity.staff.code, label: deleteBtnDisabledity.staff.name, type: '' },
-                    { code: deleteBtnDisabledity.staffOrg.code, label: deleteBtnDisabledity.staffOrg.name, type: '' },
-                    { code: deleteBtnDisabledity.subStaff.code, label: deleteBtnDisabledity.subStaff.name, type: '' },
-                    { code: deleteBtnDisabledity.subStaffOrg.code, label: deleteBtnDisabledity.subStaffOrg.name, type: '' },
+                    { code: deleteBtnDisabledity.customer.code, label: deleteBtnDisabledity.customer.name, type: '', initialDisplay: true },
+                    { code: deleteBtnDisabledity.staff.code, label: deleteBtnDisabledity.staff.name, type: '', initialDisplay: true },
+                    { code: deleteBtnDisabledity.staffOrg.code, label: deleteBtnDisabledity.staffOrg.name, type: '', initialDisplay: true },
+                    { code: deleteBtnDisabledity.subStaff.code, label: deleteBtnDisabledity.subStaff.name, type: '', initialDisplay: true },
+                    { code: deleteBtnDisabledity.subStaffOrg.code, label: deleteBtnDisabledity.subStaffOrg.name, type: '', initialDisplay: true },
                 ];
                 const itemsToAddFiltered = itemsToAdd.filter((item) => !DATA.tableFields.some((field) => field.code === item.code));
                 if (itemsToAddFiltered.length > 0) {
@@ -298,6 +313,7 @@
                 }).then((res) => {
                     if (res.isConfirmed) {
                         DATA.tableFields = structuredClone(tableFieldsDef);
+                        DATA.tableFields.forEach((f) => { f.initialDisplay = true; });
                     }
                 });
             };
@@ -351,6 +367,7 @@
                                     <th>フィールドコード</th>
                                     <th>フィールドタイプ</th>
                                     <th>操作</th>
+                                    <th>初期表示</th>
                                 </tr>
                             </thead>
                             <draggable class="list-group" v-model="DATA.tableFields" tag="tbody" :component-data="{is:'tbody'}" handle=".bz_drag_handle" ghost-class="bz_draggable_ghost" :group="{ name: 'fields', pull: true, put: true }">
@@ -362,6 +379,7 @@
                                     <td>{{ field.code }}</td>
                                     <td>{{ field.type }}</td>
                                     <td><button class="bz_bt_def bz_bt_mini" @click="removeTableField(index)" :disabled="disableDeleteBtn(field.code) || DATA.tableFields.length === 1">:削除</button></td>
+                                    <td style="text-align: center;"><input type="checkbox" v-model="field.initialDisplay" /></td>
                                 </tr>
                             </draggable>
                         </table>

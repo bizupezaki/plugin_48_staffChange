@@ -602,27 +602,48 @@
                     const idxS1 = staffsCode.indexOf(item.datas[PATTERN_NAME_ITEMS[1].cd]); // 担当者コード
                     const idxS2 = staffsCode.indexOf(item.datas[PATTERN_NAME_ITEMS[3].cd]); // 副担当者コード
 
+                    // 担当者・副担当者の完全一致チェック
+                    let isStaffMatch = false;
+                    if (idxS1 !== -1) {
+                        const masterName = STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.staff.cd];
+                        const itemName = item.datas[PATTERN_NAME_ITEMS[2].cd];
+                        if (masterName === itemName) {
+                            isStaffMatch = true;
+                        }
+                    }
+
+                    let isSubStaffMatch = false;
+                    if (idxS2 !== -1) {
+                        const masterName = STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.staff.cd];
+                        const itemName = item.datas[PATTERN_NAME_ITEMS[4].cd];
+                        if (masterName === itemName) {
+                            isSubStaffMatch = true;
+                        }
+                    }
+
                     const wk = {
                         index: cnt,
-                        [staff[0]]: idxS1 !== -1 ? item.datas[SELECTTYPE_NAME_ITEMS[0].cd] : '', // 担当者
-                        [staff[1]]: idxS1 !== -1 ? item.datas[PATTERN_NAME_ITEMS[1].cd] : '',
-                        [staff[2]]: idxS1 !== -1 ? item.datas[PATTERN_NAME_ITEMS[2].cd] : '',
-                        //[wkStaff]: idxS1 !== -1 ? item.datas[SELECTTYPE_NAME_ITEMS[0].cd] : '', // 選択値保存用
+                        [staff[0]]: isStaffMatch ? '[' + STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.staffCode.cd] + ']' + STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.staff.cd] : '', // 担当者
+                        [staff[1]]: isStaffMatch ? STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.staffCode.cd] : '',
+                        [staff[2]]: isStaffMatch ? STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.staff.cd] : '',
+                        //[wkStaff]: isStaffMatch ? item.datas[SELECTTYPE_NAME_ITEMS[0].cd] : '', // 選択値保存用
 
-                        [subStaff[0]]: idxS2 !== -1 ? item.datas[SELECTTYPE_NAME_ITEMS[1].cd] : '', // 副担当者
-                        [subStaff[1]]: idxS2 !== -1 ? item.datas[PATTERN_NAME_ITEMS[3].cd] : '',
-                        [subStaff[2]]: idxS2 !== -1 ? item.datas[PATTERN_NAME_ITEMS[4].cd] : '',
-                        //[wkSubStaff]: idxS2 !== -1 ? item.datas[SELECTTYPE_NAME_ITEMS[1].cd] : '',
+                        [subStaff[0]]: isSubStaffMatch ? '[' + STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.staffCode.cd] + ']' + STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.staff.cd] : '', // 副担当者
+                        [subStaff[1]]: isSubStaffMatch ? STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.staffCode.cd] : '',
+                        [subStaff[2]]: isSubStaffMatch ? STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.staff.cd] : '',
+                        //[wkSubStaff]: isSubStaffMatch ? item.datas[SELECTTYPE_NAME_ITEMS[1].cd] : '',
 
-                        [department[0]]: idxS1 !== -1 ? item.datas[SELECTTYPE_NAME_ITEMS[3].cd] : '', // 担当者所属
-                        [department[1]]: idxS1 !== -1 ? item.datas[PATTERN_NAME_ITEMS[7].cd] : '',
-                        [department[2]]: idxS1 !== -1 ? item.datas[PATTERN_NAME_ITEMS[8].cd] : '',
-                        //[wkDepartment]: idxS1 !== -1 ? item.datas[SELECTTYPE_NAME_ITEMS[3].cd] : '',
+                        //[department[0]]: isStaffMatch ? item.datas[SELECTTYPE_NAME_ITEMS[3].cd] : '', // 担当者所属
+                        [department[0]]: isStaffMatch && STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.organization.cd][0] ? STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.organization.cd][0].name : '', // 担当者所属
+                        [department[1]]: isStaffMatch && STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.organization.cd][0] ? STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.organization.cd][0].code : '',
+                        [department[2]]: isStaffMatch && STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.organization.cd][0] ? STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.organization.cd][0].name : '',
+                        //[wkDepartment]: isStaffMatch ? item.datas[SELECTTYPE_NAME_ITEMS[3].cd] : '',
 
-                        [subDepartment[0]]: idxS2 !== -1 ? item.datas[SELECTTYPE_NAME_ITEMS[4].cd] : '', // 副担当者所属
-                        [subDepartment[1]]: idxS2 !== -1 ? item.datas[PATTERN_NAME_ITEMS[9].cd] : '',
-                        [subDepartment[2]]: idxS2 !== -1 ? item.datas[PATTERN_NAME_ITEMS[10].cd] : '',
-                        //[wkSubDepartment]: idxS2 !== -1 ? item.datas[SELECTTYPE_NAME_ITEMS[4].cd] : '',
+                        //[subDepartment[0]]: isSubStaffMatch ? item.datas[SELECTTYPE_NAME_ITEMS[4].cd] : '', // 副担当者所属
+                        [subDepartment[0]]: isSubStaffMatch && STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.organization.cd][0] ? STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.organization.cd][0].name : '', // 副担当者所属
+                        [subDepartment[1]]: isSubStaffMatch && STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.organization.cd][0] ? STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.organization.cd][0].code : '',
+                        [subDepartment[2]]: isSubStaffMatch && STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.organization.cd][0] ? STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.organization.cd][0].name : '',
+                        //[wkSubDepartment]: isSubStaffMatch ? item.datas[SELECTTYPE_NAME_ITEMS[4].cd] : '',
                     };
 
                     const updatedItem = {
@@ -930,7 +951,7 @@
                                             if (shouldAutoCheckRegistered && wkData.includes(patternId)) cb.checked = true;
                                             if (cb.checked) {
                                                 // チェック済みのみ
-                                                console.log('checkbox');
+                                                //console.log('checkbox');
                                                 handleCheckboxChange({ target: cb });
                                             }
                                         });
@@ -1243,29 +1264,48 @@
                                 idxS2 = staffsCode.indexOf(matched[PATTERN_NAME_ITEMS[3].cd]); // 副担当者コード
                             }
 
+                            // 担当者・副担当者の完全一致チェック
+                            let isStaffMatch = false;
+                            if (idxS1 !== -1) {
+                                const masterName = STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.staff.cd];
+                                const jsonName = matched[PATTERN_NAME_ITEMS[2].cd];
+                                if (masterName === jsonName) {
+                                    isStaffMatch = true;
+                                }
+                            }
+
+                            let isSubStaffMatch = false;
+                            if (idxS2 !== -1) {
+                                const masterName = STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.staff.cd];
+                                const jsonName = matched[PATTERN_NAME_ITEMS[4].cd];
+                                if (masterName === jsonName) {
+                                    isSubStaffMatch = true;
+                                }
+                            }
+
                             const wk = {
                                 index: cnt,
-                                [staff[0]]: idxS1 !== -1 ? '[' + matched[PATTERN_NAME_ITEMS[1].cd] + ']' + matched[PATTERN_NAME_ITEMS[2].cd] : '', // 担当者
-                                [staff[1]]: idxS1 !== -1 ? matched[PATTERN_NAME_ITEMS[1].cd] : '',
-                                [staff[2]]: idxS1 !== -1 ? matched[PATTERN_NAME_ITEMS[2].cd] : '',
-                                //[wkStaff]: idxS1 !== -1 ? '[' + matched[PATTERN_NAME_ITEMS[1].cd] + ']' + matched[PATTERN_NAME_ITEMS[2].cd] : '', // 選択値保存用
+                                [staff[0]]: isStaffMatch ? '[' + STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.staffCode.cd] + ']' + STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.staff.cd] : '', // 担当者
+                                [staff[1]]: isStaffMatch ? STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.staffCode.cd] : '',
+                                [staff[2]]: isStaffMatch ? STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.staff.cd] : '',
+                                //[wkStaff]: isStaffMatch ? '[' + matched[PATTERN_NAME_ITEMS[1].cd] + ']' + matched[PATTERN_NAME_ITEMS[2].cd] : '', // 選択値保存用
 
-                                [subStaff[0]]: idxS2 !== -1 ? '[' + matched[PATTERN_NAME_ITEMS[3].cd] + ']' + matched[PATTERN_NAME_ITEMS[4].cd] : '', // 副担当者
-                                [subStaff[1]]: idxS2 !== -1 ? matched[PATTERN_NAME_ITEMS[3].cd] : '',
-                                [subStaff[2]]: idxS2 !== -1 ? matched[PATTERN_NAME_ITEMS[4].cd] : '',
-                                //[wkSubStaff]: idxS2 !== -1 ? '[' + matched[PATTERN_NAME_ITEMS[3].cd] + ']' + matched[PATTERN_NAME_ITEMS[4].cd] : '',
+                                [subStaff[0]]: isSubStaffMatch ? '[' + STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.staffCode.cd] + ']' + STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.staff.cd] : '', // 副担当者
+                                [subStaff[1]]: isSubStaffMatch ? STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.staffCode.cd] : '',
+                                [subStaff[2]]: isSubStaffMatch ? STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.staff.cd] : '',
+                                //[wkSubStaff]: isSubStaffMatch ? '[' + matched[PATTERN_NAME_ITEMS[3].cd] + ']' + matched[PATTERN_NAME_ITEMS[4].cd] : '',
 
-                                //[department[0]]: idxS1 !== -1 ? '[' + matched[PATTERN_NAME_ITEMS[7].cd] + ']' + matched[PATTERN_NAME_ITEMS[8].cd] : '', // 担当者所属
-                                [department[0]]: idxS1 !== -1 ? matched[PATTERN_NAME_ITEMS[8].cd] : '', // 担当者所属
-                                [department[1]]: idxS1 !== -1 ? matched[PATTERN_NAME_ITEMS[7].cd] : '',
-                                [department[2]]: idxS1 !== -1 ? matched[PATTERN_NAME_ITEMS[8].cd] : '',
-                                //[wkDepartment]: idxS1 !== -1 ? '[' + matched[PATTERN_NAME_ITEMS[7].cd] + ']' + matched[PATTERN_NAME_ITEMS[8].cd] : '',
+                                //[department[0]]: isStaffMatch ? '[' + matched[PATTERN_NAME_ITEMS[7].cd] + ']' + matched[PATTERN_NAME_ITEMS[8].cd] : '', // 担当者所属
+                                [department[0]]: isStaffMatch && STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.organization.cd][0] ? STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.organization.cd][0].name : '', // 担当者所属
+                                [department[1]]: isStaffMatch && STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.organization.cd][0] ? STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.organization.cd][0].code : '',
+                                [department[2]]: isStaffMatch && STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.organization.cd][0] ? STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.organization.cd][0].name : '',
+                                //[wkDepartment]: isStaffMatch ? '[' + matched[PATTERN_NAME_ITEMS[7].cd] + ']' + matched[PATTERN_NAME_ITEMS[8].cd] : '',
 
-                                //[subDepartment[0]]: idxS2 !== -1 ? '[' + matched[PATTERN_NAME_ITEMS[9].cd] + ']' + matched[PATTERN_NAME_ITEMS[10].cd] : '', // 副担当者所属
-                                [subDepartment[0]]: idxS2 !== -1 ? matched[PATTERN_NAME_ITEMS[10].cd] : '', // 副担当者所属
-                                [subDepartment[1]]: idxS2 !== -1 ? matched[PATTERN_NAME_ITEMS[9].cd] : '',
-                                [subDepartment[2]]: idxS2 !== -1 ? matched[PATTERN_NAME_ITEMS[10].cd] : '',
-                                //[wkSubDepartment]: idxS2 !== -1 ? '[' + matched[PATTERN_NAME_ITEMS[9].cd] + ']' + matched[PATTERN_NAME_ITEMS[10].cd] : '',
+                                //[subDepartment[0]]: isSubStaffMatch ? '[' + matched[PATTERN_NAME_ITEMS[9].cd] + ']' + matched[PATTERN_NAME_ITEMS[10].cd] : '', // 副担当者所属
+                                [subDepartment[0]]: isSubStaffMatch && STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.organization.cd][0] ? STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.organization.cd][0].name : '', // 副担当者所属
+                                [subDepartment[1]]: isSubStaffMatch && STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.organization.cd][0] ? STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.organization.cd][0].code : '',
+                                [subDepartment[2]]: isSubStaffMatch && STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.organization.cd][0] ? STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.organization.cd][0].name : '',
+                                //[wkSubDepartment]: isSubStaffMatch ? '[' + matched[PATTERN_NAME_ITEMS[9].cd] + ']' + matched[PATTERN_NAME_ITEMS[10].cd] : '',
                             };
                             const updatedItem = {
                                 ...item,
@@ -3355,7 +3395,7 @@
                             checkbox.dispatchEvent(new Event('change', { bubbles: true })); // イベントの発火
                         }
                     } else {
-                        console.log('val:', val, ':', checkbox.checked);
+                        //console.log('val:', val, ':', checkbox.checked);
                     }
                 });
 
@@ -4222,6 +4262,7 @@
                 if (isPatternField && isStaffOrOrgCodeName && (!rc || String(rc).trim() === '')) {
                     rc = EMPTY.label;
                 }
+
                 return rc;
             };
 
@@ -4704,6 +4745,16 @@
 
                 CONF['tableFields'].forEach((field) => {
                     const mappedCode = fieldCodeMapping[field.code] || field.code;
+
+                    // initialDisplayがfalseの場合（明示的にOFFの場合）は非表示リストに追加
+                    // undefinedの場合はtrue（表示）とみなす（既存データ互換）
+                    if (field.initialDisplay === false) {
+                        if (!STATE.visibleColumns) {
+                            STATE.visibleColumns = {};
+                        }
+                        STATE.visibleColumns[mappedCode] = false;
+                    }
+
                     const item = STATE.listData.items.find((listItem) => listItem.code === mappedCode);
                     if (item) {
                         orderedItems.push(item);
@@ -5283,7 +5334,7 @@
                                     <td v-if="isVisibleItem(key.code)" :style="{backgroundColor:setItemBackColor(key.code,field.datas) , color:setItemFontColor(key.code,field.datas)}" :class="isSelectData(key.code)===2?'items-body':''">
                                         <!--{{setItemBackColor(key.code,field.datas)}}-->
                                         <template v-if="isSelectData(key.code)===0"
-                                            >{{STATE.patternNames.noNow}}
+                                            ><!--{{STATE.patternNames.noNow}}:-->
                                             <select :value="selectedStaff(key.code,field.datas)" @change="changeStaff(field.datas.$id,$event,key.code)">
                                                 <option v-for="option in getUniqueOptions(key.code)" :key="option.value" :value="option.label">{{option.label}}</option>
                                                 <option value="">未設定</option>
