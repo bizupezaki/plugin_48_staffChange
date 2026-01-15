@@ -873,7 +873,7 @@
                                     }
 
                                     // 数値の場合
-                                    if (typeof valA === 'number' && typeof valB === 'number') {
+                                    if (typeof valA === 'number' && !isNaN(valA) && typeof valB === 'number' && !isNaN(valB)) {
                                         return isAsc ? valA - valB : valB - valA;
                                     }
 
