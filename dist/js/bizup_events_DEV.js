@@ -72,7 +72,7 @@
         patternName: { cd: 'パターン名', type: 'SINGLE_LINE_TEXT', name: 'パターン名' },
         appliedDate: { cd: '適用日', type: 'DATETIME', name: '適用日' },
         backupDate: { cd: 'バックアップ日', type: 'DATETIME', name: 'バックアップ日' },
-        executor: { cd: '実行者', type: 'SINGLE_LINE_TEXT', name: '実行者' },
+        executor: { cd: '適用者', type: 'SINGLE_LINE_TEXT', name: '適用者' },
         id: { readCd: '$id', writeCd: 'id', type: '__ID__', name: '' },
         revision: { readCd: '$revision', writeCd: 'revision', type: '__REVISION__', name: '' },
         creator: { cd: '作成者', type: 'CREATOR', name: '作成者' },
@@ -710,16 +710,16 @@
                 const wkname = rec[key]?.value ?? '';
                 let wkcreated = rec[STAFF_CHANGE_FIELDCD.createdTime.cd]?.value ?? '';
                 let dt = luxon.DateTime.fromJSDate(new Date(wkcreated));
-                wkcreated = dt.toFormat('yyyy年MM月dd日 HH:mm');
+                wkcreated = dt.toFormat('yyyy/MM/dd HH:mm');
                 let wkupdated = rec[STAFF_CHANGE_FIELDCD.updatedTime.cd]?.value ?? '';
                 dt = luxon.DateTime.fromJSDate(new Date(wkupdated));
-                wkupdated = dt.toFormat('yyyy年MM月dd日 HH:mm');
+                wkupdated = dt.toFormat('yyyy/MM/dd HH:mm');
                 const wkmodifier = rec[STAFF_CHANGE_FIELDCD.modifier.cd]?.value?.name ?? '';
                 const wkcreator = rec[STAFF_CHANGE_FIELDCD.creator.cd]?.value?.name ?? '';
                 let wkapplied = rec[STAFF_CHANGE_FIELDCD.appliedDate.cd]?.value ?? '';
                 if (wkapplied) {
                     let dtA = luxon.DateTime.fromJSDate(new Date(wkapplied));
-                    wkapplied = dtA.toFormat('yyyy年MM月dd日 HH:mm');
+                    wkapplied = dtA.toFormat('yyyy/MM/dd HH:mm');
                 }
                 let wkexecutor = rec[STAFF_CHANGE_FIELDCD.executor.cd]?.value ?? '';
                 if (wkexecutor.includes('（バックアップ復元）')) {
@@ -728,14 +728,14 @@
                 const wkId = rec['$id']?.value ?? '';
 
                 const wkLink = generateHref(wkId, utils.constants.THIS_APP_ID);
-                let tableHtml = `<td style="border: 1px solid #ddd; padding: 8px; text-align: center;"><input type="checkbox" name="patternSelect" style="cursor: pointer;" value="${index}" data-pattern-id="${wkId}" data-pattern-name="${wkname}"></td>`;
-                tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: left;"><a style="color: inherit; text-decoration: underline;" href="${wkLink}" target="_blank">${wkname}</a></td>`;
-                tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: left;">${wkmodifier}</td>`;
-                tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${wkupdated}</td>`;
-                tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: left;">${wkcreator}</td>`;
-                tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${wkcreated}</td>`;
-                tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: left;">${wkexecutor}</td>`;
-                tableHtml += `<td style="border: 1px solid #ddd; padding: 8px; text-align: center;">${wkapplied}</td>`;
+                let tableHtml = `<td style="border: 1px solid #ddd; padding: 4px; text-align: center;"><input type="checkbox" name="patternSelect" style="cursor: pointer;" value="${index}" data-pattern-id="${wkId}" data-pattern-name="${wkname}"></td>`;
+                tableHtml += `<td style="border: 1px solid #ddd; padding: 4px; text-align: left;"><a style="color: inherit; text-decoration: underline;" href="${wkLink}" target="_blank">${wkname}</a></td>`;
+                tableHtml += `<td style="border: 1px solid #ddd; padding: 4px; text-align: left;">${wkmodifier}</td>`;
+                tableHtml += `<td style="border: 1px solid #ddd; padding: 4px; text-align: center;">${wkupdated}</td>`;
+                tableHtml += `<td style="border: 1px solid #ddd; padding: 4px; text-align: left;">${wkcreator}</td>`;
+                tableHtml += `<td style="border: 1px solid #ddd; padding: 4px; text-align: center;">${wkcreated}</td>`;
+                tableHtml += `<td style="border: 1px solid #ddd; padding: 4px; text-align: left;">${wkexecutor}</td>`;
+                tableHtml += `<td style="border: 1px solid #ddd; padding: 4px; text-align: center;">${wkapplied}</td>`;
                 //tableHtml += '</tr>';
                 return tableHtml;
             };
@@ -773,15 +773,49 @@
                     const creator = STAFF_CHANGE_FIELDCD.creator.name;
 
                     let patterns = [];
+                    // Swalのタイトルのフォントサイズ：(約30px)
+                    // Swalのフォントサイズ：1.125em(約18px)
                     let style = `<style>
+                        .swal2-popup {
+                            display: flex !important;
+                            flex-direction: column !important;
+                        }
+                        .swal2-title {
+                            font-size: 18px;
+                            /*padding-bottom: 0 !important;*/
+                            /*margin-bottom: 0 !important;*/
+                            /*height: 10px;*/
+                        }
                         .swal2-html-container {
-                            padding-top:0 !important;
+                           /* padding-top:0 !important;*/
+                            /*padding-bottom:0 !important;*/
+                            /*margin-bottom: 0 !important;*/
+                            /*margin-top:0 !important;*/
+                            /*height: 700px;*/
+                            font-size: 13px;
+                            display: flex !important;
+                            flex-direction: column !important;
+                            flex: 1; 
+                            overflow: hidden !important;
+                        }
+                        .swal2-actions {
+                            /*margin-top: 0 !important;*/
+                            /*padding-top:0 !important;*/
+                        }
+                        #patternTable {
+                            font-size: 13px;
+                        }
+                        #patternTable th, #patternTable td {
+                            font-size: 13px;
+                        }
+                        .sort-btn {
+                            font-size: 12px;
                         }
                     </style>`;
-                    let tableHtml = '<div style=""><table id="patternTable" style="width:100%; border: none; border-collapse: separate;">';
+                    let tableHtml = '<div style="height: 100%; overflow: auto;"><table id="patternTable" style="width:100%; border: none; border-collapse: separate;">';
                     tableHtml += '<thead><tr>';
 
-                    let wk = `<th style="position: sticky; top: 0; border-collapse: separate; border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2; text-align: center;">`;
+                    let wk = `<th style="position: sticky; top: 0; border-collapse: separate; border: 1px solid #ddd; padding: 4px; background-color: #f2f2f2; text-align: center;">`;
                     tableHtml += `${wk}選択</th>`;
                     tableHtml += `${wk}${label}<span class="sort-btn" data-field="name">▲</span></th>`;
                     tableHtml += `${wk}${modifier}<span class="sort-btn" data-field="modifier">▲</span></th>`;
@@ -806,13 +840,14 @@
                     const result = await Swal.fire({
                         title: 'パターン一覧',
                         html: style + tableHtml,
-                        width: '80%',
+                        width: '65%',
                         showConfirmButton: true,
                         showCancelButton: true,
                         showDenyButton: true,
                         confirmButtonText: '開く',
                         denyButtonText: '非表示にする',
                         cancelButtonText: 'キャンセル',
+                        grow: 'fullscreen',
                         //draggable: true,
                         //inputValidator: (value) => validatorRow(value),
                         didOpen: () => {
@@ -875,6 +910,14 @@
                                     // 数値の場合
                                     if (typeof valA === 'number' && !isNaN(valA) && typeof valB === 'number' && !isNaN(valB)) {
                                         return isAsc ? valA - valB : valB - valA;
+                                    }
+
+                                    // 適用日時の場合、昇順降順に関わらず、空欄は下へ移動
+                                    if (field === 'applied') {
+                                        // 空欄は常に下
+                                        if (!valA && !valB) return 0;
+                                        if (!valA) return 1; // valAが空欄なら下
+                                        if (!valB) return -1; // valBが空欄なら下
                                     }
 
                                     // 文字列の場合
@@ -1052,11 +1095,13 @@
                         setTimeout(async () => {
                             const confirmResult = await Swal.fire({
                                 title: '確認',
-                                text: '選択したパターンを非表示にしてよいですか？',
+                                //text: '選択したパターンを非表示にしてよいですか？',
+                                html: '<div style="margin-bottom: 15px;">選択したパターンを非表示にしてよいですか？</div><div style="text-align: center; line-height: 1; color: #333;"><span style="font-size: 15px; color: #666; display: inline-block; text-align: left;">※非表示にしたパターンは「非表示パターン一覧」でご確認頂けます。<br>「非表示フラグ」のチェックを外すと再度本画面に表示されるようになります。</span></div>',
                                 icon: 'warning',
                                 showCancelButton: true,
                                 confirmButtonText: 'はい',
                                 cancelButtonText: 'いいえ',
+                                width: '42%',
                             });
                             if (confirmResult.isConfirmed) {
                                 // レコード更新
@@ -2133,7 +2178,7 @@
                     }
                     .form-block {
                         width: 320px;
-                        min-height: 140px;
+                        min-height: 100px;
                         padding: 12px;
                         box-sizing: border-box;
                         border: 1px solid #888;
@@ -2146,6 +2191,9 @@
                     .select-equal-width {
                         width: 260px;
                         margin-left: 20px;
+                    }
+                    .form-block p {
+                        margin: 8px 0;
                     }
                     .swal2-title {
                         cursor:move;
@@ -2161,7 +2209,7 @@
                             <label style="margin:0;"><input type="checkbox" id="checkAll" ${checkAllChecked}> 全て選択</label>
                         </span><br>
                         <label style="margin-left:50px;"><input type="checkbox" id="staff" name="item" value="staff" ${staffChecked}> 担当者</label><br>
-                        <label style="margin-left:50px;"><input type="checkbox" id="subStaff" name="item" value="subStaff" ${subStaffChecked}> 副担当者</label><br><br>
+                        <label style="margin-left:50px;"><input type="checkbox" id="subStaff" name="item" value="subStaff" ${subStaffChecked}> 副担当者</label><br>
                         
                         <div style="display: flex; flex-direction: column; gap: 8px;">
                             <span class="form-block">
@@ -2170,7 +2218,7 @@
                                 <label style="margin-left:20px;"><input type="radio" name="staffRadio" value="current" ${currentRadioChecked}> 顧客カルテ上のスタッフ</label>
                                 <select id="staffSelect" class="select-equal-width"><option value="" disabled selected>選択してください</option>${staffsNew}</select>
                             </span>
-                            <span style="text-align: center; margin: 8px 0;">↓</span>
+                            <span style="text-align: center;">↓</span>
                             <span class="form-block">
                                 <p>変更後のスタッフ</p>
                                 <select id="afterStaffSelect" class="select-equal-width"><option value="" disabled selected>選択してください</option>${staffsNew}</select>
@@ -3264,6 +3312,7 @@
             /**
              * windowの倍率変更時にポップアップの高さを調整する
              */
+            // CSSで自動調整するため不要
             window.addEventListener('resize', function () {
                 // 画面の推定倍率を取得
                 const windowHeight = window.innerHeight;
