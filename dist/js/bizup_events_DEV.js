@@ -3867,16 +3867,11 @@
                     cd = STAFFMASTER_FIELD.staffCode.cd;
                     nm = STAFFMASTER_FIELD.staff.cd;
 
-                    pairs = (filteredStaffs ?? [])
-                        .filter((item) => item[cd] !== undefined && item[cd] !== null && String(item[cd]).trim() !== '')
-                        .map((item) => ({
-                            label: '[' + item[cd] + ']' + item[nm],
-                            value: item[cd],
-                        }));
-
                     if (!staffFlg.some((f) => f)) {
-                        // STATE.listData.datasにあってpairsにない担当者コード・担当者名をpairsの最後に追加
-                        const pairsCodes = pairs.map((p) => p.value);
+                        // 顧客カルテ上のスタッフ用：顧客カルテのデータを優先
+                        const cartePairs = new Map(); // コードをキーとして名前を保存
+
+                        // まず顧客カルテのデータを取得
                         (STATE.listData.datas ?? []).forEach((item) => {
                             let staffCode = '';
                             let staffName = '';
@@ -3887,13 +3882,36 @@
                                 staffCode = item.datas[PATTERN_NAME_ITEMS[3].cd];
                                 staffName = item.datas[PATTERN_NAME_ITEMS[4].cd];
                             }
-                            if (staffCode && !pairsCodes.includes(staffCode)) {
-                                pairs.push({
-                                    label: '[' + staffCode + ']' + staffName,
-                                    value: staffCode,
-                                });
+                            if (staffCode && staffName) {
+                                cartePairs.set(staffCode, staffName);
                             }
                         });
+
+                        // 顧客カルテのデータを使ってpairsを作成
+                        pairs = Array.from(cartePairs.entries()).map(([code, name]) => ({
+                            label: '[' + code + ']' + name,
+                            value: code,
+                        }));
+
+                        // 担当者マスタにあって顧客カルテにないスタッフを追加
+                        (filteredStaffs ?? [])
+                            .filter((item) => item[cd] !== undefined && item[cd] !== null && String(item[cd]).trim() !== '')
+                            .forEach((item) => {
+                                if (!cartePairs.has(item[cd])) {
+                                    pairs.push({
+                                        label: '[' + item[cd] + ']' + item[nm],
+                                        value: item[cd],
+                                    });
+                                }
+                            });
+                    } else {
+                        // パターン上のスタッフ用：担当者マスタのデータを使用
+                        pairs = (filteredStaffs ?? [])
+                            .filter((item) => item[cd] !== undefined && item[cd] !== null && String(item[cd]).trim() !== '')
+                            .map((item) => ({
+                                label: '[' + item[cd] + ']' + item[nm],
+                                value: item[cd],
+                            }));
                     }
                 } else if (code === SELECTTYPE_NAME_ITEMS[3].cd || code === SELECTTYPE_NAME_ITEMS[4].cd || departmentFlg.some((f) => f)) {
                     const filteredDepartments = [...STATE.selectStaffs]; // 初期表示時にデータ設定済
