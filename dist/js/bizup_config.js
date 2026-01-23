@@ -313,9 +313,18 @@
                 }).then((res) => {
                     if (res.isConfirmed) {
                         DATA.tableFields = structuredClone(tableFieldsDef);
-                        DATA.tableFields.forEach((f) => { f.initialDisplay = true; });
+                        DATA.tableFields.forEach((f) => {
+                            f.initialDisplay = true;
+                        });
                     }
                 });
+            };
+
+            // 左テーブルに追加された項目の初期表示をONにする
+            const onTableFieldsChange = (e) => {
+                if (e && e.added && e.added.element) {
+                    e.added.element.initialDisplay = true;
+                }
             };
 
             return {
@@ -328,6 +337,7 @@
                 availableFields,
                 setDefault,
                 disableDeleteBtn,
+                onTableFieldsChange,
             };
         },
         components: {
@@ -370,7 +380,7 @@
                                     <th>初期表示</th>
                                 </tr>
                             </thead>
-                            <draggable class="list-group" v-model="DATA.tableFields" tag="tbody" :component-data="{is:'tbody'}" handle=".bz_drag_handle" ghost-class="bz_draggable_ghost" :group="{ name: 'fields', pull: true, put: true }">
+                            <draggable class="list-group" v-model="DATA.tableFields" tag="tbody" :component-data="{is:'tbody'}" handle=".bz_drag_handle" ghost-class="bz_draggable_ghost" :group="{ name: 'fields', pull: true, put: true }" @change="onTableFieldsChange">
                                 <tr v-for="(field,index) in DATA.tableFields" :key="field.code">
                                     <td class="bz_drag_handle">
                                         <span>☰</span>

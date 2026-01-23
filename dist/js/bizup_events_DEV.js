@@ -749,9 +749,11 @@
                 STATE.listDataPattern = [];
 
                 // 非表示フラグがON以外のパターンを取得
+                let records = null;
                 try {
                     const condition = [STAFF_CHANGE_FIELDCD.isVisible.cd] + ' not in ("ON")';
-                    const records = await getRecords([], condition, '', utils.constants.THIS_APP_ID);
+                    records = await getRecords([], condition, '', utils.constants.THIS_APP_ID);
+                    // records = await getRecords([], condition, '', ''); // テスト用
                     console.log('openPattern取得結果:', records);
                     // 取得したデータをSwalを使って、表で表示する
                     if (!records || records.length === 0) {
@@ -763,19 +765,33 @@
                         });
                         return;
                     }
+                } catch (error) {
+                    console.error('openPattern取得失敗:', error);
 
-                    // 画面表示
-                    const key = STAFF_CHANGE_FIELDCD.patternName.cd;
-                    const label = STAFF_CHANGE_FIELDCD.patternName.name;
-                    const modifier = STAFF_CHANGE_FIELDCD.modifier.name;
-                    const updatedTime = STAFF_CHANGE_FIELDCD.updatedTime.name;
-                    const createdTime = STAFF_CHANGE_FIELDCD.createdTime.name;
-                    const creator = STAFF_CHANGE_FIELDCD.creator.name;
+                    await Swal.fire({
+                        title: 'データ取得失敗',
+                        text: 'データ取得に失敗しました。',
+                        icon: 'error',
+                        showConfirmButton: false,
+                        showCancelButton: true,
+                        cancelButtonText: '閉じる',
+                    });
 
-                    let patterns = [];
-                    // Swalのタイトルのフォントサイズ：(約30px)
-                    // Swalのフォントサイズ：1.125em(約18px)
-                    let style = `<style>
+                    return;
+                }
+
+                // 画面表示
+                const key = STAFF_CHANGE_FIELDCD.patternName.cd;
+                const label = STAFF_CHANGE_FIELDCD.patternName.name;
+                const modifier = STAFF_CHANGE_FIELDCD.modifier.name;
+                const updatedTime = STAFF_CHANGE_FIELDCD.updatedTime.name;
+                const createdTime = STAFF_CHANGE_FIELDCD.createdTime.name;
+                const creator = STAFF_CHANGE_FIELDCD.creator.name;
+
+                let patterns = [];
+                // Swalのタイトルのフォントサイズ：(約30px)
+                // Swalのフォントサイズ：1.125em(約18px)
+                let style = `<style>
                         .swal2-popup {
                             display: flex !important;
                             flex-direction: column !important;
@@ -812,626 +828,626 @@
                             font-size: 12px;
                         }
                     </style>`;
-                    let tableHtml = '<div style="height: 100%; overflow: auto;"><table id="patternTable" style="width:100%; border: none; border-collapse: separate;">';
-                    tableHtml += '<thead><tr>';
+                let tableHtml = '<div style="height: 100%; overflow: auto;"><table id="patternTable" style="width:100%; border: none; border-collapse: separate;">';
+                tableHtml += '<thead><tr>';
 
-                    let wk = `<th style="position: sticky; top: 0; border-collapse: separate; border: 1px solid #ddd; padding: 4px; background-color: #f2f2f2; text-align: center;">`;
-                    tableHtml += `${wk}選択</th>`;
-                    tableHtml += `${wk}${label}<span class="sort-btn" data-field="name">▲</span></th>`;
-                    tableHtml += `${wk}${modifier}<span class="sort-btn" data-field="modifier">▲</span></th>`;
-                    tableHtml += `${wk}${updatedTime}<span class="sort-btn" data-field="updated">▲</span></th>`;
-                    tableHtml += `${wk}${creator}<span class="sort-btn" data-field="creator">▲</span></th>`;
-                    tableHtml += `${wk}${createdTime}<span class="sort-btn" data-field="created">▲</span></th>`;
-                    tableHtml += `${wk}適用者<span class="sort-btn" data-field="executor">▲</span></th>`;
-                    tableHtml += `${wk}適用日時<span class="sort-btn" data-field="applied">▲</span></th>`;
+                let wk = `<th style="position: sticky; top: 0; border-collapse: separate; border: 1px solid #ddd; padding: 4px; background-color: #f2f2f2; text-align: center;">`;
+                tableHtml += `${wk}選択</th>`;
+                tableHtml += `${wk}${label}<span class="sort-btn" data-field="name">▲</span></th>`;
+                tableHtml += `${wk}${modifier}<span class="sort-btn" data-field="modifier">▲</span></th>`;
+                tableHtml += `${wk}${updatedTime}<span class="sort-btn" data-field="updated">▲</span></th>`;
+                tableHtml += `${wk}${creator}<span class="sort-btn" data-field="creator">▲</span></th>`;
+                tableHtml += `${wk}${createdTime}<span class="sort-btn" data-field="created">▲</span></th>`;
+                tableHtml += `${wk}適用者<span class="sort-btn" data-field="executor">▲</span></th>`;
+                tableHtml += `${wk}適用日時<span class="sort-btn" data-field="applied">▲</span></th>`;
 
-                    tableHtml += '</tr></thead>';
-                    tableHtml += '<tbody>';
-                    records.forEach((rec, index) => {
-                        // tbody作成
-                        tableHtml += patternHtml(rec, key, index);
+                tableHtml += '</tr></thead>';
+                tableHtml += '<tbody>';
+                records.forEach((rec, index) => {
+                    // tbody作成
+                    tableHtml += patternHtml(rec, key, index);
 
-                        // JSONデータを取得
-                        patterns.push({ name: rec[key].value, jsonData: rec[STAFF_CHANGE_FIELDCD.jsonData.cd]?.value ?? '', id: rec[EXCEPT_ITEMS[0]].value, revision: rec[EXCEPT_ITEMS[1]].value, tekiyo: rec[STAFF_CHANGE_FIELDCD.appliedDate.cd]?.value ?? '', backup: rec[STAFF_CHANGE_FIELDCD.backupDate.cd]?.value ?? '' });
-                    });
-                    tableHtml += '</tbody></table></div>';
-                    tableHtml += '<input type="hidden" id="clickName" name="clickName" value="">';
+                    // JSONデータを取得
+                    patterns.push({ name: rec[key].value, jsonData: rec[STAFF_CHANGE_FIELDCD.jsonData.cd]?.value ?? '', id: rec[EXCEPT_ITEMS[0]].value, revision: rec[EXCEPT_ITEMS[1]].value, tekiyo: rec[STAFF_CHANGE_FIELDCD.appliedDate.cd]?.value ?? '', backup: rec[STAFF_CHANGE_FIELDCD.backupDate.cd]?.value ?? '' });
+                });
+                tableHtml += '</tbody></table></div>';
+                tableHtml += '<input type="hidden" id="clickName" name="clickName" value="">';
 
-                    const result = await Swal.fire({
-                        title: 'パターン一覧',
-                        html: style + tableHtml,
-                        width: '65%',
-                        showConfirmButton: true,
-                        showCancelButton: true,
-                        showDenyButton: true,
-                        confirmButtonText: '開く',
-                        denyButtonText: '非表示にする',
-                        cancelButtonText: 'キャンセル',
-                        grow: 'fullscreen',
-                        //draggable: true,
-                        //inputValidator: (value) => validatorRow(value),
-                        didOpen: () => {
-                            // ソート機能の実装
+                const result = await Swal.fire({
+                    title: 'パターン一覧',
+                    html: style + tableHtml,
+                    width: '65%',
+                    showConfirmButton: true,
+                    showCancelButton: true,
+                    showDenyButton: true,
+                    confirmButtonText: '開く',
+                    denyButtonText: '非表示にする',
+                    cancelButtonText: 'キャンセル',
+                    grow: 'fullscreen',
+                    //draggable: true,
+                    //inputValidator: (value) => validatorRow(value),
+                    didOpen: () => {
+                        // ソート機能の実装
 
-                            const sortPatternTable = (field, isAsc) => {
-                                // isAscが指定されていない場合、前回のソート状態によって切り替える
-                                if (isAsc === undefined) {
-                                    if (currentSortField === field && currentSortAsc) {
-                                        // 同じフィールドで昇順の場合は降順に切り替え
-                                        isAsc = false;
-                                    } else {
-                                        // 異なるフィールドか、降順の場合は昇順に設定
-                                        isAsc = true;
-                                    }
+                        const sortPatternTable = (field, isAsc) => {
+                            // isAscが指定されていない場合、前回のソート状態によって切り替える
+                            if (isAsc === undefined) {
+                                if (currentSortField === field && currentSortAsc) {
+                                    // 同じフィールドで昇順の場合は降順に切り替え
+                                    isAsc = false;
+                                } else {
+                                    // 異なるフィールドか、降順の場合は昇順に設定
+                                    isAsc = true;
                                 }
-                                currentSortField = field;
-                                currentSortAsc = isAsc;
+                            }
+                            currentSortField = field;
+                            currentSortAsc = isAsc;
 
-                                // 現状を取得
-                                const selectedIds = new Set(STATE.listDataPattern.map((item) => item.clickNo));
+                            // 現状を取得
+                            const selectedIds = new Set(STATE.listDataPattern.map((item) => item.clickNo));
 
-                                // recordsをソート
-                                const sortedRecords = [...records].sort((a, b) => {
-                                    let valA, valB;
+                            // recordsをソート
+                            const sortedRecords = [...records].sort((a, b) => {
+                                let valA, valB;
 
-                                    switch (field) {
-                                        case 'name':
-                                            valA = a[key]?.value ?? '';
-                                            valB = b[key]?.value ?? '';
-                                            break;
-                                        case 'created':
-                                            valA = new Date(a[STAFF_CHANGE_FIELDCD.createdTime.cd]?.value ?? '').getTime();
-                                            valB = new Date(b[STAFF_CHANGE_FIELDCD.createdTime.cd]?.value ?? '').getTime();
-                                            break;
-                                        case 'updated':
-                                            valA = new Date(a[STAFF_CHANGE_FIELDCD.updatedTime.cd]?.value ?? '').getTime();
-                                            valB = new Date(b[STAFF_CHANGE_FIELDCD.updatedTime.cd]?.value ?? '').getTime();
-                                            break;
-                                        case 'modifier':
-                                            valA = a[STAFF_CHANGE_FIELDCD.modifier.cd]?.value?.name ?? '';
-                                            valB = b[STAFF_CHANGE_FIELDCD.modifier.cd]?.value?.name ?? '';
-                                            break;
-                                        case 'creator':
-                                            valA = a[STAFF_CHANGE_FIELDCD.creator.cd]?.value?.name ?? '';
-                                            valB = b[STAFF_CHANGE_FIELDCD.creator.cd]?.value?.name ?? '';
-                                            break;
-                                        case 'executor':
-                                            valA = a[STAFF_CHANGE_FIELDCD.executor.cd]?.value ?? '';
-                                            valB = b[STAFF_CHANGE_FIELDCD.executor.cd]?.value ?? '';
-                                            break;
-                                        case 'applied':
-                                            valA = new Date(a[STAFF_CHANGE_FIELDCD.appliedDate.cd]?.value ?? '').getTime();
-                                            valB = new Date(b[STAFF_CHANGE_FIELDCD.appliedDate.cd]?.value ?? '').getTime();
-                                            break;
-                                        default:
-                                            return 0;
-                                    }
+                                switch (field) {
+                                    case 'name':
+                                        valA = a[key]?.value ?? '';
+                                        valB = b[key]?.value ?? '';
+                                        break;
+                                    case 'created':
+                                        valA = new Date(a[STAFF_CHANGE_FIELDCD.createdTime.cd]?.value ?? '').getTime();
+                                        valB = new Date(b[STAFF_CHANGE_FIELDCD.createdTime.cd]?.value ?? '').getTime();
+                                        break;
+                                    case 'updated':
+                                        valA = new Date(a[STAFF_CHANGE_FIELDCD.updatedTime.cd]?.value ?? '').getTime();
+                                        valB = new Date(b[STAFF_CHANGE_FIELDCD.updatedTime.cd]?.value ?? '').getTime();
+                                        break;
+                                    case 'modifier':
+                                        valA = a[STAFF_CHANGE_FIELDCD.modifier.cd]?.value?.name ?? '';
+                                        valB = b[STAFF_CHANGE_FIELDCD.modifier.cd]?.value?.name ?? '';
+                                        break;
+                                    case 'creator':
+                                        valA = a[STAFF_CHANGE_FIELDCD.creator.cd]?.value?.name ?? '';
+                                        valB = b[STAFF_CHANGE_FIELDCD.creator.cd]?.value?.name ?? '';
+                                        break;
+                                    case 'executor':
+                                        valA = a[STAFF_CHANGE_FIELDCD.executor.cd]?.value ?? '';
+                                        valB = b[STAFF_CHANGE_FIELDCD.executor.cd]?.value ?? '';
+                                        break;
+                                    case 'applied':
+                                        valA = new Date(a[STAFF_CHANGE_FIELDCD.appliedDate.cd]?.value ?? '').getTime();
+                                        valB = new Date(b[STAFF_CHANGE_FIELDCD.appliedDate.cd]?.value ?? '').getTime();
+                                        break;
+                                    default:
+                                        return 0;
+                                }
 
-                                    // 数値の場合
-                                    if (typeof valA === 'number' && !isNaN(valA) && typeof valB === 'number' && !isNaN(valB)) {
-                                        return isAsc ? valA - valB : valB - valA;
-                                    }
+                                // 数値の場合
+                                if (typeof valA === 'number' && !isNaN(valA) && typeof valB === 'number' && !isNaN(valB)) {
+                                    return isAsc ? valA - valB : valB - valA;
+                                }
 
-                                    // 適用日時の場合、昇順降順に関わらず、空欄は下へ移動
-                                    if (field === 'applied') {
-                                        // 空欄は常に下
-                                        if (!valA && !valB) return 0;
-                                        if (!valA) return 1; // valAが空欄なら下
-                                        if (!valB) return -1; // valBが空欄なら下
-                                    }
+                                // 適用日時の場合、昇順降順に関わらず、空欄は下へ移動
+                                if (field === 'applied') {
+                                    // 空欄は常に下
+                                    if (!valA && !valB) return 0;
+                                    if (!valA) return 1; // valAが空欄なら下
+                                    if (!valB) return -1; // valBが空欄なら下
+                                }
 
-                                    // 文字列の場合
-                                    const strA = String(valA);
-                                    const strB = String(valB);
-                                    if (strA === '' && strB === '') return 0;
-                                    if (strA === '') return isAsc ? 1 : -1;
-                                    if (strB === '') return isAsc ? -1 : 1;
+                                // 文字列の場合
+                                const strA = String(valA);
+                                const strB = String(valB);
+                                if (strA === '' && strB === '') return 0;
+                                if (strA === '') return isAsc ? 1 : -1;
+                                if (strB === '') return isAsc ? -1 : 1;
 
-                                    return isAsc ? strA.localeCompare(strB, 'ja') : strB.localeCompare(strA, 'ja');
-                                });
+                                return isAsc ? strA.localeCompare(strB, 'ja') : strB.localeCompare(strA, 'ja');
+                            });
 
-                                // テーブルボディを再描画
-                                const tbody = document.querySelector('#patternTable tbody');
-                                if (tbody) {
-                                    tbody.innerHTML = '';
-                                    let wkData = [];
-                                    sortedRecords.forEach((rec, index) => {
-                                        const row = document.createElement('tr');
-                                        row.style.cursor = 'pointer';
-                                        // チェック有無取得
-                                        const originalIndex = records.findIndex((r) => r['$id']?.value === rec['$id']?.value);
+                            // テーブルボディを再描画
+                            const tbody = document.querySelector('#patternTable tbody');
+                            if (tbody) {
+                                tbody.innerHTML = '';
+                                let wkData = [];
+                                sortedRecords.forEach((rec, index) => {
+                                    const row = document.createElement('tr');
+                                    row.style.cursor = 'pointer';
+                                    // チェック有無取得
+                                    const originalIndex = records.findIndex((r) => r['$id']?.value === rec['$id']?.value);
 
-                                        // tbody作成
-                                        row.innerHTML = patternHtml(rec, key, originalIndex);
-                                        const cb = row.querySelector('input[name="patternSelect"]');
-                                        if (cb) {
-                                            // 並び替え時
-                                            const val = parseInt(cb.value, 10);
-                                            if (selectedIds.has(val)) {
-                                                cb.checked = true;
-                                                row.style.backgroundColor = HIGHTLIGHT_COLOR;
-                                            }
-                                            // チェックボックスのchecked属性設定（再表示時は自動ONを抑止）
-                                            const shouldAutoCheckRegistered = !selectedPatterns || selectedPatterns.length === 0;
-                                            if (shouldAutoCheckRegistered) {
-                                                const registeredPatternIds = STATE.patternNames.names.map((item) => item.id);
-                                                const wkId = rec['$id']?.value ?? '';
-                                                const isRegistered = registeredPatternIds.includes(wkId);
-                                                if (isRegistered) {
-                                                    wkData.push(wkId);
-                                                }
+                                    // tbody作成
+                                    row.innerHTML = patternHtml(rec, key, originalIndex);
+                                    const cb = row.querySelector('input[name="patternSelect"]');
+                                    if (cb) {
+                                        // 並び替え時
+                                        const val = parseInt(cb.value, 10);
+                                        if (selectedIds.has(val)) {
+                                            cb.checked = true;
+                                            row.style.backgroundColor = HIGHTLIGHT_COLOR;
+                                        }
+                                        // チェックボックスのchecked属性設定（再表示時は自動ONを抑止）
+                                        const shouldAutoCheckRegistered = !selectedPatterns || selectedPatterns.length === 0;
+                                        if (shouldAutoCheckRegistered) {
+                                            const registeredPatternIds = STATE.patternNames.names.map((item) => item.id);
+                                            const wkId = rec['$id']?.value ?? '';
+                                            const isRegistered = registeredPatternIds.includes(wkId);
+                                            if (isRegistered) {
+                                                wkData.push(wkId);
                                             }
                                         }
-                                        tbody.appendChild(row);
-                                    });
+                                    }
+                                    tbody.appendChild(row);
+                                });
 
-                                    // ソートボタンのアクティブ状態を更新
-                                    document.querySelectorAll('#patternTable .sort-btn').forEach((btn) => {
-                                        const btnField = btn.getAttribute('data-field');
-                                        // 表示テキスト（▲/▼）を更新。選択中のフィールドのみトグル、その他は常に▲
-                                        btn.textContent = btnField === field ? (isAsc ? '▲' : '▼') : '▲';
-                                        if (btnField === field) {
-                                            btn.classList.add('active');
-                                        } else {
-                                            btn.classList.remove('active');
+                                // ソートボタンのアクティブ状態を更新
+                                document.querySelectorAll('#patternTable .sort-btn').forEach((btn) => {
+                                    const btnField = btn.getAttribute('data-field');
+                                    // 表示テキスト（▲/▼）を更新。選択中のフィールドのみトグル、その他は常に▲
+                                    btn.textContent = btnField === field ? (isAsc ? '▲' : '▼') : '▲';
+                                    if (btnField === field) {
+                                        btn.classList.add('active');
+                                    } else {
+                                        btn.classList.remove('active');
+                                    }
+                                });
+
+                                const selectedForHighlight = STATE.listDataPattern.map((item) => ({ index: item.clickNo }));
+                                // 行クリックイベントを再設定
+                                setupRowClickHighlighting('patternTable', selectedForHighlight);
+                                // リンク作成による親イベントの伝播をとめる
+                                preventLinkPropagation('patternTable');
+
+                                // チェックボックス変更イベント再設定
+                                // 発火（リスナー登録後）
+                                Swal.getPopup()
+                                    .querySelectorAll('input[name="patternSelect"]')
+                                    .forEach((cb) => {
+                                        const patternId = cb.getAttribute('data-pattern-id');
+                                        // 再表示時（selectedPatternsあり）は、表示中パターンの自動ONをしない
+                                        const shouldAutoCheckRegistered = !selectedPatterns || selectedPatterns.length === 0;
+                                        if (shouldAutoCheckRegistered && wkData.includes(patternId)) cb.checked = true;
+                                        if (cb.checked) {
+                                            // チェック済みのみ
+                                            //console.log('checkbox');
+                                            handleCheckboxChange({ target: cb });
                                         }
                                     });
+                            }
+                        };
 
-                                    const selectedForHighlight = STATE.listDataPattern.map((item) => ({ index: item.clickNo }));
-                                    // 行クリックイベントを再設定
-                                    setupRowClickHighlighting('patternTable', selectedForHighlight);
-                                    // リンク作成による親イベントの伝播をとめる
-                                    preventLinkPropagation('patternTable');
+                        // ソート状態を保持する変数
+                        let currentSortField = null;
+                        let currentSortAsc = true;
 
-                                    // チェックボックス変更イベント再設定
-                                    // 発火（リスナー登録後）
-                                    Swal.getPopup()
-                                        .querySelectorAll('input[name="patternSelect"]')
-                                        .forEach((cb) => {
-                                            const patternId = cb.getAttribute('data-pattern-id');
-                                            // 再表示時（selectedPatternsあり）は、表示中パターンの自動ONをしない
-                                            const shouldAutoCheckRegistered = !selectedPatterns || selectedPatterns.length === 0;
-                                            if (shouldAutoCheckRegistered && wkData.includes(patternId)) cb.checked = true;
-                                            if (cb.checked) {
-                                                // チェック済みのみ
-                                                //console.log('checkbox');
-                                                handleCheckboxChange({ target: cb });
-                                            }
-                                        });
-                                }
-                            };
-
-                            // ソート状態を保持する変数
-                            let currentSortField = null;
-                            let currentSortAsc = true;
-
-                            // ソートボタンにイベントリスナーを追加
-                            document.querySelectorAll('#patternTable .sort-btn').forEach((btn) => {
-                                btn.addEventListener('click', (e) => {
-                                    e.stopPropagation(); // 「行クリックでチェックON/OFF＆ハイライト」イベントを動作させないようにするために、親イベントの伝播を止める
-                                    const field = btn.getAttribute('data-field');
-                                    sortPatternTable(field); // isAscを指定しないことでトグル動作を実現
-                                });
+                        // ソートボタンにイベントリスナーを追加
+                        document.querySelectorAll('#patternTable .sort-btn').forEach((btn) => {
+                            btn.addEventListener('click', (e) => {
+                                e.stopPropagation(); // 「行クリックでチェックON/OFF＆ハイライト」イベントを動作させないようにするために、親イベントの伝播を止める
+                                const field = btn.getAttribute('data-field');
+                                sortPatternTable(field); // isAscを指定しないことでトグル動作を実現
                             });
-
-                            const actions = Swal.getActions(); // 標準ボタン群のコンテナ
-                            const resetBtn = document.createElement('button');
-                            resetBtn.textContent = 'リセット';
-                            resetBtn.classList.add('swal2-cancel', 'swal2-styled'); // キャンセルと同じデザイン
-                            const cancelBtn = actions.querySelector('.swal2-cancel');
-                            actions.insertBefore(resetBtn, cancelBtn); // キャンセルボタンの前に挿入
-
-                            // イベント（リセット）
-                            resetBtn.addEventListener('click', () => {
-                                console.log('reset');
-                                const patternCheckboxes = Swal.getPopup().querySelectorAll('input[name="patternSelect"]');
-                                patternCheckboxes.forEach((checkboxEl) => {
-                                    // チェック解除
-                                    checkboxEl.checked = false;
-                                    // 行のハイライト解除
-                                    const rowEl = checkboxEl.closest('tr');
-                                    if (rowEl) rowEl.style.backgroundColor = '';
-                                    // 状態更新のためchangeイベント発火
-                                    checkboxEl.dispatchEvent(new Event('change', { bubbles: true }));
-                                });
-                                // 選択済み配列をクリア
-                                STATE.listDataPattern.splice(0, STATE.listDataPattern.length);
-                                // バリデーションメッセージもクリア
-                                Swal.resetValidationMessage();
-
-                                // 閉じる
-                                //Swal.close();
-                            });
-
-                            // 行クリックイベントを再設定
-                            setupRowClickHighlighting('patternTable', selectedPatterns);
-                            // リンク作成による親イベントの伝播をとめる
-                            preventLinkPropagation('patternTable');
-                            // ソート実行（更新日時）
-                            sortPatternTable('updated', false);
-                        },
-                        preConfirm: () => {
-                            // 開くボタン押下時
-                            if (STATE.listDataPattern.length <= 0) {
-                                Swal.showValidationMessage('パターンを選択してください');
-                                return false;
-                            }
-                            if (STATE.listDataPattern.length > 3) {
-                                Swal.showValidationMessage('追加できるパターンは最大' + MAX_PATTERN + 'つまでです。');
-                                return false;
-                            }
-                            if (STATE.patternNames.len > MAX_PATTERN) {
-                                Swal.showValidationMessage('追加できるパターンは最大' + MAX_PATTERN + 'つまでです。<br>現在のパターン数：' + STATE.patternNames.len + 'つ　選択したパターン数：' + STATE.listDataPattern.length + 'つ');
-                                return false;
-                            }
-                        },
-                        preDeny: () => {
-                            // 非表示にするボタン押下時
-                            if (STATE.listDataPattern.length <= 0) {
-                                Swal.showValidationMessage('パターンを選択してください');
-                                return false;
-                            }
-                        },
-                        //width: '60%',
-                    });
-
-                    if (result.isDismissed) {
-                        // キャンセルの場合
-                        //console.log('キャンセルの処理');
-                        return;
-                    }
-
-                    if (result.isDenied) {
-                        // 非表示にするの場合
-                        console.log('パターンを非表示にする処理');
-
-                        // チェックボックスの内容を保存
-                        const checkboxes = document.querySelectorAll('input[name="patternSelect"]:checked');
-                        const selectedPatterns = Array.from(checkboxes).map((checkbox) => {
-                            return { index: parseInt(checkbox.value, 10), id: checkbox.getAttribute('data-pattern-id') };
                         });
 
-                        Swal.close(); // いったん閉じる
-                        setTimeout(async () => {
-                            const confirmResult = await Swal.fire({
-                                title: '確認',
-                                //text: '選択したパターンを非表示にしてよいですか？',
-                                html: '<div style="margin-bottom: 15px;">選択したパターンを非表示にしてよいですか？</div><div style="text-align: center; line-height: 1; color: #333;"><span style="font-size: 15px; color: #666; display: inline-block; text-align: left;">※非表示にしたパターンは「非表示パターン一覧」でご確認頂けます。<br>「非表示フラグ」のチェックを外すと再度本画面に表示されるようになります。</span></div>',
-                                icon: 'warning',
-                                showCancelButton: true,
-                                confirmButtonText: 'はい',
-                                cancelButtonText: 'いいえ',
-                                width: '42%',
+                        const actions = Swal.getActions(); // 標準ボタン群のコンテナ
+                        const resetBtn = document.createElement('button');
+                        resetBtn.textContent = 'リセット';
+                        resetBtn.classList.add('swal2-cancel', 'swal2-styled'); // キャンセルと同じデザイン
+                        const cancelBtn = actions.querySelector('.swal2-cancel');
+                        actions.insertBefore(resetBtn, cancelBtn); // キャンセルボタンの前に挿入
+
+                        // イベント（リセット）
+                        resetBtn.addEventListener('click', () => {
+                            console.log('reset');
+                            const patternCheckboxes = Swal.getPopup().querySelectorAll('input[name="patternSelect"]');
+                            patternCheckboxes.forEach((checkboxEl) => {
+                                // チェック解除
+                                checkboxEl.checked = false;
+                                // 行のハイライト解除
+                                const rowEl = checkboxEl.closest('tr');
+                                if (rowEl) rowEl.style.backgroundColor = '';
+                                // 状態更新のためchangeイベント発火
+                                checkboxEl.dispatchEvent(new Event('change', { bubbles: true }));
                             });
-                            if (confirmResult.isConfirmed) {
-                                // レコード更新
-                                const updateData = selectedPatterns.map((pattern) => {
-                                    return {
-                                        [STAFF_CHANGE_FIELDCD.id.writeCd]: pattern.id,
-                                        //[STAFF_CHANGE_FIELDCD.id.writeCd]: 1000,  // テスト用
-                                        [STAFF_CHANGE_FIELDCD.revision.writeCd]: patterns[pattern.index].revision,
-                                        //[STAFF_CHANGE_FIELDCD.revision.writeCd]: 9999, // テスト用
-                                        record: {
-                                            [STAFF_CHANGE_FIELDCD.isVisible.cd]: {
-                                                value: ['ON'],
-                                            },
-                                        },
-                                    };
-                                });
+                            // 選択済み配列をクリア
+                            STATE.listDataPattern.splice(0, STATE.listDataPattern.length);
+                            // バリデーションメッセージもクリア
+                            Swal.resetValidationMessage();
 
-                                // チェックボックスのデータ用
-                                let wkselectedPatterns = [];
-                                try {
-                                    await updateRecords(updateData, utils.constants.THIS_APP_ID);
-                                } catch (error) {
-                                    console.error('パターンの非表示フラグ更新に失敗しました。', error.error);
-                                    const errorCode = error.error?.code;
-                                    if (errorCode === 'GAIA_CO02') {
-                                        await Swal.fire({
-                                            title: '非表示フラグ更新失敗',
-                                            html: '<div>他のユーザが編集した可能性があります。<br>再度更新を試みてください。</div>',
-                                            icon: 'warning',
-                                            showConfirmButton: false,
-                                            showCancelButton: true,
-                                            cancelButtonText: '閉じる',
-                                        });
-                                    } else {
-                                        await Swal.fire({
-                                            title: '非表示フラグ更新失敗',
-                                            text: 'パターンの非表示フラグ更新に失敗しました。',
-                                            icon: 'error',
-                                            showConfirmButton: false,
-                                            showCancelButton: true,
-                                            cancelButtonText: '閉じる',
-                                        });
-                                    }
-
-                                    // 失敗した場合は選択されたパターンを保持
-                                    wkselectedPatterns = selectedPatterns;
-                                    //return;
-                                }
-
-                                // 画面再表示
-                                await openPattern(wkselectedPatterns);
-                            }
-                            if (confirmResult.isDismissed) {
-                                // キャンセルの場合
-                                await openPattern(selectedPatterns); // 再度開く
-                            }
-                        }, 300);
-                        return;
-                    }
-
-                    // OK処理
-                    // 3つより多い場合はエラー
-                    if (STATE.patternNames.len > MAX_PATTERN) {
-                        Swal.fire({
-                            title: 'パターンの最大数超過',
-                            text: '追加できるパターンは最大' + MAX_PATTERN + 'つまでです。',
-                            icon: 'warning',
-                            confirmButtonText: '閉じる',
+                            // 閉じる
+                            //Swal.close();
                         });
-                        return;
-                    }
 
-                    // 選択されたパターンと既存のパターンの相違をチェックする関数
-                    const isDifferent = () => {
-                        // パターンが保存されていない場合
-                        let patterns = STATE.patternNames.names.map((item) => ({ isChanged: item.isChanged, name: item.name, id: item.id }));
-                        if (patterns.some((item) => item.isChanged === false)) {
-                            const existingPatternIds = STATE.patternNames.names.map((item) => item.id);
-                            const selectedPatternIds = STATE.listDataPattern.map((item) => item.id);
-                            for (let i = 0; i < existingPatternIds.length; i++) {
-                                if (!selectedPatternIds.includes(existingPatternIds[i])) {
-                                    const patternElement = patterns.find((p) => p.id === existingPatternIds[i]);
-                                    if (patternElement) {
-                                        patternElement.isChanged = true;
-                                    }
-                                }
-                            }
+                        // 行クリックイベントを再設定
+                        setupRowClickHighlighting('patternTable', selectedPatterns);
+                        // リンク作成による親イベントの伝播をとめる
+                        preventLinkPropagation('patternTable');
+                        // ソート実行（更新日時）
+                        sortPatternTable('updated', false);
+                    },
+                    preConfirm: () => {
+                        // 開くボタン押下時
+                        if (STATE.listDataPattern.length <= 0) {
+                            Swal.showValidationMessage('パターンを選択してください');
+                            return false;
                         }
-                        return patterns;
-                    };
+                        if (STATE.listDataPattern.length > 3) {
+                            Swal.showValidationMessage('追加できるパターンは最大' + MAX_PATTERN + 'つまでです。');
+                            return false;
+                        }
+                        if (STATE.patternNames.len > MAX_PATTERN) {
+                            Swal.showValidationMessage('追加できるパターンは最大' + MAX_PATTERN + 'つまでです。<br>現在のパターン数：' + STATE.patternNames.len + 'つ　選択したパターン数：' + STATE.listDataPattern.length + 'つ');
+                            return false;
+                        }
+                    },
+                    preDeny: () => {
+                        // 非表示にするボタン押下時
+                        if (STATE.listDataPattern.length <= 0) {
+                            Swal.showValidationMessage('パターンを選択してください');
+                            return false;
+                        }
+                    },
+                    //width: '60%',
+                });
 
-                    // 表示されているパターンと選択されたパターンと相違があった場合、確認メッセージを表示
-                    const is = isDifferent();
-                    if (is.some((item) => item.isChanged === true)) {
-                        let name = is
-                            .filter((item) => item.isChanged === true)
-                            .map((item) => item.name)
-                            .join('」、「');
-                        //console.log(changedPatterns);
+                if (result.isDismissed) {
+                    // キャンセルの場合
+                    //console.log('キャンセルの処理');
+                    return;
+                }
 
-                        // チェックボックスの内容を保存
-                        const checkboxes = document.querySelectorAll('input[name="patternSelect"]:checked');
-                        const selectedPatterns = Array.from(checkboxes).map((checkbox) => {
-                            return { index: parseInt(checkbox.value, 10), id: checkbox.getAttribute('data-pattern-id') };
-                        });
+                if (result.isDenied) {
+                    // 非表示にするの場合
+                    console.log('パターンを非表示にする処理');
 
-                        Swal.close(); // いったん閉じる
-                        await utils.common.delay(300);
+                    // チェックボックスの内容を保存
+                    const checkboxes = document.querySelectorAll('input[name="patternSelect"]:checked');
+                    const selectedPatterns = Array.from(checkboxes).map((checkbox) => {
+                        return { index: parseInt(checkbox.value, 10), id: checkbox.getAttribute('data-pattern-id') };
+                    });
+
+                    Swal.close(); // いったん閉じる
+                    setTimeout(async () => {
                         const confirmResult = await Swal.fire({
                             title: '確認',
-                            text: `パターン「${name}」に変更がありますがこのまま閉じてよいですか？`,
+                            //text: '選択したパターンを非表示にしてよいですか？',
+                            html: '<div style="margin-bottom: 15px;">選択したパターンを非表示にしてよいですか？</div><div style="text-align: center; line-height: 1; color: #333;"><span style="font-size: 15px; color: #666; display: inline-block; text-align: left;">※非表示にしたパターンは「非表示パターン一覧」でご確認頂けます。<br>「非表示フラグ」のチェックを外すと再度本画面に表示されるようになります。</span></div>',
                             icon: 'warning',
                             showCancelButton: true,
                             confirmButtonText: 'はい',
                             cancelButtonText: 'いいえ',
+                            width: '42%',
                         });
                         if (confirmResult.isConfirmed) {
-                            // はい：後続処理（パターン反映）を実行
+                            // レコード更新
+                            const updateData = selectedPatterns.map((pattern) => {
+                                return {
+                                    [STAFF_CHANGE_FIELDCD.id.writeCd]: pattern.id,
+                                    //[STAFF_CHANGE_FIELDCD.id.writeCd]: 1000,  // テスト用
+                                    [STAFF_CHANGE_FIELDCD.revision.writeCd]: patterns[pattern.index].revision,
+                                    //[STAFF_CHANGE_FIELDCD.revision.writeCd]: 9999, // テスト用
+                                    record: {
+                                        [STAFF_CHANGE_FIELDCD.isVisible.cd]: {
+                                            value: ['ON'],
+                                        },
+                                    },
+                                };
+                            });
+
+                            // チェックボックスのデータ用
+                            let wkselectedPatterns = [];
+                            try {
+                                await updateRecords(updateData, utils.constants.THIS_APP_ID);
+                            } catch (error) {
+                                console.error('パターンの非表示フラグ更新に失敗しました。', error.error);
+                                const errorCode = error.error?.code;
+                                if (errorCode === 'GAIA_CO02') {
+                                    await Swal.fire({
+                                        title: '非表示フラグ更新失敗',
+                                        html: '<div>他のユーザが編集した可能性があります。<br>再度更新を試みてください。</div>',
+                                        icon: 'warning',
+                                        showConfirmButton: false,
+                                        showCancelButton: true,
+                                        cancelButtonText: '閉じる',
+                                    });
+                                } else {
+                                    await Swal.fire({
+                                        title: '非表示フラグ更新失敗',
+                                        text: 'パターンの非表示フラグ更新に失敗しました。',
+                                        icon: 'error',
+                                        showConfirmButton: false,
+                                        showCancelButton: true,
+                                        cancelButtonText: '閉じる',
+                                    });
+                                }
+
+                                // 失敗した場合は選択されたパターンを保持
+                                wkselectedPatterns = selectedPatterns;
+                                //return;
+                            }
+
+                            // 画面再表示
+                            await openPattern(wkselectedPatterns);
                         }
                         if (confirmResult.isDismissed) {
                             // キャンセルの場合
                             await openPattern(selectedPatterns); // 再度開く
-                            return; // 後続処理を実行しない
+                        }
+                    }, 300);
+                    return;
+                }
+
+                // OK処理
+                // 3つより多い場合はエラー
+                if (STATE.patternNames.len > MAX_PATTERN) {
+                    Swal.fire({
+                        title: 'パターンの最大数超過',
+                        text: '追加できるパターンは最大' + MAX_PATTERN + 'つまでです。',
+                        icon: 'warning',
+                        confirmButtonText: '閉じる',
+                    });
+                    return;
+                }
+
+                // 選択されたパターンと既存のパターンの相違をチェックする関数
+                const isDifferent = () => {
+                    // パターンが保存されていない場合
+                    let patterns = STATE.patternNames.names.map((item) => ({ isChanged: item.isChanged, name: item.name, id: item.id }));
+                    if (patterns.some((item) => item.isChanged === false)) {
+                        const existingPatternIds = STATE.patternNames.names.map((item) => item.id);
+                        const selectedPatternIds = STATE.listDataPattern.map((item) => item.id);
+                        for (let i = 0; i < existingPatternIds.length; i++) {
+                            if (!selectedPatternIds.includes(existingPatternIds[i])) {
+                                const patternElement = patterns.find((p) => p.id === existingPatternIds[i]);
+                                if (patternElement) {
+                                    patternElement.isChanged = true;
+                                }
+                            }
                         }
                     }
-                    //console.log('isDifferent:', isDifferent());
+                    return patterns;
+                };
 
-                    // 選択されたパターンだけを残すため、既存のパターン列とデータを一度クリア
-                    // 先に一括置換設定をパターンID単位で退避（選択解除したパターンの設定はここで切り離すため）
-                    const prevBulkReplaceById = {};
-                    STATE.patternNames.names.forEach((p) => {
-                        const setting = STATE.bulkReplaceSettings?.[p.index];
-                        if (setting) {
-                            prevBulkReplaceById[p.id] = setting;
-                        }
+                // 表示されているパターンと選択されたパターンと相違があった場合、確認メッセージを表示
+                const is = isDifferent();
+                if (is.some((item) => item.isChanged === true)) {
+                    let name = is
+                        .filter((item) => item.isChanged === true)
+                        .map((item) => item.name)
+                        .join('」、「');
+                    //console.log(changedPatterns);
+
+                    // チェックボックスの内容を保存
+                    const checkboxes = document.querySelectorAll('input[name="patternSelect"]:checked');
+                    const selectedPatterns = Array.from(checkboxes).map((checkbox) => {
+                        return { index: parseInt(checkbox.value, 10), id: checkbox.getAttribute('data-pattern-id') };
                     });
-                    const selectedPatternIds = new Set(STATE.listDataPattern.map((p) => p.id));
-                    const nextBulkReplaceSettings = {};
 
-                    const baseItems = STATE.listData.items.filter((item) => !item.code.startsWith('新_') && !item.code.startsWith('旧_'));
-                    STATE.listData.items = baseItems;
-
-                    Object.keys(STATE.filters).forEach((key) => {
-                        if (key.startsWith('新_') || key.startsWith('旧_')) {
-                            delete STATE.filters[key];
-                        }
+                    Swal.close(); // いったん閉じる
+                    await utils.common.delay(300);
+                    const confirmResult = await Swal.fire({
+                        title: '確認',
+                        text: `パターン「${name}」に変更がありますがこのまま閉じてよいですか？`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'はい',
+                        cancelButtonText: 'いいえ',
                     });
-                    Object.keys(STATE.multiSelectFilters).forEach((key) => {
-                        if (key.startsWith('新_') || key.startsWith('旧_')) {
-                            delete STATE.multiSelectFilters[key];
+                    if (confirmResult.isConfirmed) {
+                        // はい：後続処理（パターン反映）を実行
+                    }
+                    if (confirmResult.isDismissed) {
+                        // キャンセルの場合
+                        await openPattern(selectedPatterns); // 再度開く
+                        return; // 後続処理を実行しない
+                    }
+                }
+                //console.log('isDifferent:', isDifferent());
+
+                // 選択されたパターンだけを残すため、既存のパターン列とデータを一度クリア
+                // 先に一括置換設定をパターンID単位で退避（選択解除したパターンの設定はここで切り離すため）
+                const prevBulkReplaceById = {};
+                STATE.patternNames.names.forEach((p) => {
+                    const setting = STATE.bulkReplaceSettings?.[p.index];
+                    if (setting) {
+                        prevBulkReplaceById[p.id] = setting;
+                    }
+                });
+                const selectedPatternIds = new Set(STATE.listDataPattern.map((p) => p.id));
+                const nextBulkReplaceSettings = {};
+
+                const baseItems = STATE.listData.items.filter((item) => !item.code.startsWith('新_') && !item.code.startsWith('旧_'));
+                STATE.listData.items = baseItems;
+
+                Object.keys(STATE.filters).forEach((key) => {
+                    if (key.startsWith('新_') || key.startsWith('旧_')) {
+                        delete STATE.filters[key];
+                    }
+                });
+                Object.keys(STATE.multiSelectFilters).forEach((key) => {
+                    if (key.startsWith('新_') || key.startsWith('旧_')) {
+                        delete STATE.multiSelectFilters[key];
+                    }
+                });
+                STATE.listData.datas = STATE.listData.datas.map((item) => ({
+                    ...item,
+                    datas: {
+                        ...item.datas,
+                        pattern: [],
+                    },
+                }));
+                STATE.patternNames.names = [];
+                STATE.patternNames.len = 0;
+
+                // 選択したパターンを順番に再構築
+                STATE.listDataPattern.forEach((pattern, index) => {
+                    const jsonData = patterns[STATE.listDataPattern[index].clickNo].jsonData;
+                    //i++;
+                    //if (i === 1) jsonData = '{name:"test",language:"ja"}'; // テスト用
+                    //console.log('listDataPattern:', STATE.listDataPattern);
+                    // データをJSONからオブジェクトに変換してSTATEに保存
+                    const clickData = JSON.parse(jsonData);
+                    pattern.datas = clickData;
+                    //console.log('クリックされた行のデータ:', clickData);
+
+                    // パターン表示
+                    let cnt = STATE.patternNames.len + 1;
+                    const staff = [SELECTTYPE_NAME_ITEMS[0].cd, PATTERN_NAME_ITEMS[1].cd, PATTERN_NAME_ITEMS[2].cd];
+                    const subStaff = [SELECTTYPE_NAME_ITEMS[1].cd, PATTERN_NAME_ITEMS[3].cd, PATTERN_NAME_ITEMS[4].cd];
+                    const department = [SELECTTYPE_NAME_ITEMS[3].cd, PATTERN_NAME_ITEMS[7].cd, PATTERN_NAME_ITEMS[8].cd];
+                    const subDepartment = [SELECTTYPE_NAME_ITEMS[4].cd, PATTERN_NAME_ITEMS[9].cd, PATTERN_NAME_ITEMS[10].cd];
+
+                    // 項目名設定
+                    STATE.listData.items.push({ code: '新_' + SELECTTYPE_NAME_ITEMS[0].cd + '_' + cnt, label: SELECTTYPE_NAME_ITEMS[0].label, type: '' });
+                    STATE.listData.items.push({ code: '新_' + SELECTTYPE_NAME_ITEMS[3].cd + '_' + cnt, label: SELECTTYPE_NAME_ITEMS[3].label, type: '' });
+                    STATE.listData.items.push({ code: '新_' + SELECTTYPE_NAME_ITEMS[1].cd + '_' + cnt, label: SELECTTYPE_NAME_ITEMS[1].label, type: '' });
+                    STATE.listData.items.push({ code: '新_' + SELECTTYPE_NAME_ITEMS[4].cd + '_' + cnt, label: SELECTTYPE_NAME_ITEMS[4].label, type: '' });
+
+                    // パターンIDが変更前と一致する場合のみ設定を引き継ぎ（選択解除されたパターンの設定は復元しない）
+                    const patternId = patterns[pattern.clickNo].id;
+                    if (selectedPatternIds.has(patternId) && prevBulkReplaceById[patternId]) {
+                        nextBulkReplaceSettings[cnt] = prevBulkReplaceById[patternId];
+                    }
+
+                    // 現役の担当者取得
+                    const staffsCode = STATE.selectStaffs.map((s) => s[STAFFMASTER_FIELD.staffCode.cd]);
+
+                    // STATE.listData.datasに追加
+                    const updatedArray = STATE.listData.datas.reduce((acc, item) => {
+                        // JSONデータから該当IDのデータを取得
+                        const matched = clickData.find((data) => data['$id'] === item.datas['$id']);
+                        // 担当者コードと所属名は対になっているはずなので、担当者コードで現役かどうかをチェック
+                        let idxS1 = -1;
+                        let idxS2 = -1;
+                        if (matched) {
+                            idxS1 = staffsCode.indexOf(matched[PATTERN_NAME_ITEMS[1].cd]); // 担当者コード
+                            idxS2 = staffsCode.indexOf(matched[PATTERN_NAME_ITEMS[3].cd]); // 副担当者コード
                         }
-                    });
-                    STATE.listData.datas = STATE.listData.datas.map((item) => ({
-                        ...item,
-                        datas: {
-                            ...item.datas,
-                            pattern: [],
-                        },
-                    }));
-                    STATE.patternNames.names = [];
-                    STATE.patternNames.len = 0;
 
-                    // 選択したパターンを順番に再構築
-                    STATE.listDataPattern.forEach((pattern, index) => {
-                        const jsonData = patterns[STATE.listDataPattern[index].clickNo].jsonData;
-                        //i++;
-                        //if (i === 1) jsonData = '{name:"test",language:"ja"}'; // テスト用
-                        //console.log('listDataPattern:', STATE.listDataPattern);
-                        // データをJSONからオブジェクトに変換してSTATEに保存
-                        const clickData = JSON.parse(jsonData);
-                        pattern.datas = clickData;
-                        //console.log('クリックされた行のデータ:', clickData);
-
-                        // パターン表示
-                        let cnt = STATE.patternNames.len + 1;
-                        const staff = [SELECTTYPE_NAME_ITEMS[0].cd, PATTERN_NAME_ITEMS[1].cd, PATTERN_NAME_ITEMS[2].cd];
-                        const subStaff = [SELECTTYPE_NAME_ITEMS[1].cd, PATTERN_NAME_ITEMS[3].cd, PATTERN_NAME_ITEMS[4].cd];
-                        const department = [SELECTTYPE_NAME_ITEMS[3].cd, PATTERN_NAME_ITEMS[7].cd, PATTERN_NAME_ITEMS[8].cd];
-                        const subDepartment = [SELECTTYPE_NAME_ITEMS[4].cd, PATTERN_NAME_ITEMS[9].cd, PATTERN_NAME_ITEMS[10].cd];
-
-                        // 項目名設定
-                        STATE.listData.items.push({ code: '新_' + SELECTTYPE_NAME_ITEMS[0].cd + '_' + cnt, label: SELECTTYPE_NAME_ITEMS[0].label, type: '' });
-                        STATE.listData.items.push({ code: '新_' + SELECTTYPE_NAME_ITEMS[3].cd + '_' + cnt, label: SELECTTYPE_NAME_ITEMS[3].label, type: '' });
-                        STATE.listData.items.push({ code: '新_' + SELECTTYPE_NAME_ITEMS[1].cd + '_' + cnt, label: SELECTTYPE_NAME_ITEMS[1].label, type: '' });
-                        STATE.listData.items.push({ code: '新_' + SELECTTYPE_NAME_ITEMS[4].cd + '_' + cnt, label: SELECTTYPE_NAME_ITEMS[4].label, type: '' });
-
-                        // パターンIDが変更前と一致する場合のみ設定を引き継ぎ（選択解除されたパターンの設定は復元しない）
-                        const patternId = patterns[pattern.clickNo].id;
-                        if (selectedPatternIds.has(patternId) && prevBulkReplaceById[patternId]) {
-                            nextBulkReplaceSettings[cnt] = prevBulkReplaceById[patternId];
+                        // 担当者・副担当者の完全一致チェック
+                        let isStaffMatch = false;
+                        if (idxS1 !== -1) {
+                            const masterName = STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.staff.cd];
+                            const jsonName = matched[PATTERN_NAME_ITEMS[2].cd];
+                            if (masterName === jsonName) {
+                                isStaffMatch = true;
+                            }
                         }
 
-                        // 現役の担当者取得
-                        const staffsCode = STATE.selectStaffs.map((s) => s[STAFFMASTER_FIELD.staffCode.cd]);
-
-                        // STATE.listData.datasに追加
-                        const updatedArray = STATE.listData.datas.reduce((acc, item) => {
-                            // JSONデータから該当IDのデータを取得
-                            const matched = clickData.find((data) => data['$id'] === item.datas['$id']);
-                            // 担当者コードと所属名は対になっているはずなので、担当者コードで現役かどうかをチェック
-                            let idxS1 = -1;
-                            let idxS2 = -1;
-                            if (matched) {
-                                idxS1 = staffsCode.indexOf(matched[PATTERN_NAME_ITEMS[1].cd]); // 担当者コード
-                                idxS2 = staffsCode.indexOf(matched[PATTERN_NAME_ITEMS[3].cd]); // 副担当者コード
+                        let isSubStaffMatch = false;
+                        if (idxS2 !== -1) {
+                            const masterName = STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.staff.cd];
+                            const jsonName = matched[PATTERN_NAME_ITEMS[4].cd];
+                            if (masterName === jsonName) {
+                                isSubStaffMatch = true;
                             }
+                        }
 
-                            // 担当者・副担当者の完全一致チェック
-                            let isStaffMatch = false;
-                            if (idxS1 !== -1) {
-                                const masterName = STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.staff.cd];
-                                const jsonName = matched[PATTERN_NAME_ITEMS[2].cd];
-                                if (masterName === jsonName) {
-                                    isStaffMatch = true;
-                                }
-                            }
-
-                            let isSubStaffMatch = false;
-                            if (idxS2 !== -1) {
-                                const masterName = STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.staff.cd];
-                                const jsonName = matched[PATTERN_NAME_ITEMS[4].cd];
-                                if (masterName === jsonName) {
-                                    isSubStaffMatch = true;
-                                }
-                            }
-
-                            const wk = {
-                                index: cnt,
-                                [staff[0]]: isStaffMatch ? '[' + STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.staffCode.cd] + ']' + STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.staff.cd] : '', // 担当者
-                                [staff[1]]: isStaffMatch ? STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.staffCode.cd] : '',
-                                [staff[2]]: isStaffMatch ? STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.staff.cd] : '',
-                                //[wkStaff]: isStaffMatch ? '[' + matched[PATTERN_NAME_ITEMS[1].cd] + ']' + matched[PATTERN_NAME_ITEMS[2].cd] : '', // 選択値保存用
-
-                                [subStaff[0]]: isSubStaffMatch ? '[' + STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.staffCode.cd] + ']' + STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.staff.cd] : '', // 副担当者
-                                [subStaff[1]]: isSubStaffMatch ? STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.staffCode.cd] : '',
-                                [subStaff[2]]: isSubStaffMatch ? STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.staff.cd] : '',
-                                //[wkSubStaff]: isSubStaffMatch ? '[' + matched[PATTERN_NAME_ITEMS[3].cd] + ']' + matched[PATTERN_NAME_ITEMS[4].cd] : '',
-
-                                //[department[0]]: isStaffMatch ? '[' + matched[PATTERN_NAME_ITEMS[7].cd] + ']' + matched[PATTERN_NAME_ITEMS[8].cd] : '', // 担当者所属
-                                [department[0]]: isStaffMatch && STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.organization.cd][0] ? STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.organization.cd][0].name : '', // 担当者所属
-                                [department[1]]: isStaffMatch && STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.organization.cd][0] ? STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.organization.cd][0].code : '',
-                                [department[2]]: isStaffMatch && STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.organization.cd][0] ? STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.organization.cd][0].name : '',
-                                //[wkDepartment]: isStaffMatch ? '[' + matched[PATTERN_NAME_ITEMS[7].cd] + ']' + matched[PATTERN_NAME_ITEMS[8].cd] : '',
-
-                                //[subDepartment[0]]: isSubStaffMatch ? '[' + matched[PATTERN_NAME_ITEMS[9].cd] + ']' + matched[PATTERN_NAME_ITEMS[10].cd] : '', // 副担当者所属
-                                [subDepartment[0]]: isSubStaffMatch && STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.organization.cd][0] ? STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.organization.cd][0].name : '', // 副担当者所属
-                                [subDepartment[1]]: isSubStaffMatch && STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.organization.cd][0] ? STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.organization.cd][0].code : '',
-                                [subDepartment[2]]: isSubStaffMatch && STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.organization.cd][0] ? STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.organization.cd][0].name : '',
-                                //[wkSubDepartment]: isSubStaffMatch ? '[' + matched[PATTERN_NAME_ITEMS[9].cd] + ']' + matched[PATTERN_NAME_ITEMS[10].cd] : '',
-                            };
-                            const updatedItem = {
-                                ...item,
-                                datas: {
-                                    ...item.datas,
-                                    ['pattern']: [...(item.datas['pattern'] || []), wk],
-                                },
-                            };
-
-                            // バックアップ表示
-                            if (matched && matched['OLD']) {
-                                //console.log('OLD');
-                                updatedItem.datas['pattern'][cnt - 1]['OLD'] = {
-                                    ...updatedItem.datas['pattern'][cnt - 1]['OLD'],
-                                    [PATTERN_NAME_ITEMS[1].cd]: matched['OLD'][PATTERN_NAME_ITEMS[1].cd],
-                                    [PATTERN_NAME_ITEMS[2].cd]: matched['OLD'][PATTERN_NAME_ITEMS[2].cd],
-                                    [PATTERN_NAME_ITEMS[3].cd]: matched['OLD'][PATTERN_NAME_ITEMS[3].cd],
-                                    [PATTERN_NAME_ITEMS[4].cd]: matched['OLD'][PATTERN_NAME_ITEMS[4].cd],
-                                    [PATTERN_NAME_ITEMS[7].cd]: matched['OLD'][PATTERN_NAME_ITEMS[7].cd],
-                                    [PATTERN_NAME_ITEMS[8].cd]: matched['OLD'][PATTERN_NAME_ITEMS[8].cd],
-                                    [PATTERN_NAME_ITEMS[9].cd]: matched['OLD'][PATTERN_NAME_ITEMS[9].cd],
-                                    [PATTERN_NAME_ITEMS[10].cd]: matched['OLD'][PATTERN_NAME_ITEMS[10].cd],
-                                    [SELECTTYPE_NAME_ITEMS[0].cd]: matched['OLD'][PATTERN_NAME_ITEMS[1].cd] ? '[' + matched['OLD'][PATTERN_NAME_ITEMS[1].cd] + ']' + matched['OLD'][PATTERN_NAME_ITEMS[2].cd] : '',
-                                    [SELECTTYPE_NAME_ITEMS[1].cd]: matched['OLD'][PATTERN_NAME_ITEMS[3].cd] ? '[' + matched['OLD'][PATTERN_NAME_ITEMS[3].cd] + ']' + matched['OLD'][PATTERN_NAME_ITEMS[4].cd] : '',
-                                    [SELECTTYPE_NAME_ITEMS[3].cd]: matched['OLD'][PATTERN_NAME_ITEMS[8].cd] ? matched['OLD'][PATTERN_NAME_ITEMS[8].cd] : '',
-                                    [SELECTTYPE_NAME_ITEMS[4].cd]: matched['OLD'][PATTERN_NAME_ITEMS[10].cd] ? matched['OLD'][PATTERN_NAME_ITEMS[10].cd] : '',
-                                };
-                            }
-                            acc.push(updatedItem);
-                            return acc;
-                        }, []);
-                        STATE.listData.datas = updatedArray;
-
-                        // パターン追加
-                        STATE.patternNames.names.push({
+                        const wk = {
                             index: cnt,
-                            name: pattern.clickName,
-                            id: patterns[pattern.clickNo].id,
-                            revision: patterns[pattern.clickNo].revision,
-                            titleColor: PATTERN_TITLE_COLOR[cnt - 1],
-                            itemsColor: PATTERN_ITEMS_COLOR[cnt - 1], // アイテムカラーを追加
-                            backupDispFlg: false,
-                            colspan: 4, // 項目数
-                            isChanged: false, // 変更有無
-                        });
-                        STATE.patternNames.len = cnt;
+                            [staff[0]]: isStaffMatch ? '[' + STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.staffCode.cd] + ']' + STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.staff.cd] : '', // 担当者
+                            [staff[1]]: isStaffMatch ? STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.staffCode.cd] : '',
+                            [staff[2]]: isStaffMatch ? STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.staff.cd] : '',
+                            //[wkStaff]: isStaffMatch ? '[' + matched[PATTERN_NAME_ITEMS[1].cd] + ']' + matched[PATTERN_NAME_ITEMS[2].cd] : '', // 選択値保存用
 
-                        // OLDの有無とOLDのデータがnullかどうかで、バックアップの有無を設定
-                        if (STATE.listData.datas[0].datas['pattern'][cnt - 1].OLD) {
-                            if (patterns[STATE.listDataPattern[index].clickNo].backup !== '') {
-                                STATE.patternNames.names[cnt - 1].backupDisableFlg = false;
-                            } else {
-                                STATE.patternNames.names[cnt - 1].backupDisableFlg = true;
-                            }
+                            [subStaff[0]]: isSubStaffMatch ? '[' + STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.staffCode.cd] + ']' + STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.staff.cd] : '', // 副担当者
+                            [subStaff[1]]: isSubStaffMatch ? STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.staffCode.cd] : '',
+                            [subStaff[2]]: isSubStaffMatch ? STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.staff.cd] : '',
+                            //[wkSubStaff]: isSubStaffMatch ? '[' + matched[PATTERN_NAME_ITEMS[3].cd] + ']' + matched[PATTERN_NAME_ITEMS[4].cd] : '',
+
+                            //[department[0]]: isStaffMatch ? '[' + matched[PATTERN_NAME_ITEMS[7].cd] + ']' + matched[PATTERN_NAME_ITEMS[8].cd] : '', // 担当者所属
+                            [department[0]]: isStaffMatch && STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.organization.cd][0] ? STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.organization.cd][0].name : '', // 担当者所属
+                            [department[1]]: isStaffMatch && STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.organization.cd][0] ? STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.organization.cd][0].code : '',
+                            [department[2]]: isStaffMatch && STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.organization.cd][0] ? STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.organization.cd][0].name : '',
+                            //[wkDepartment]: isStaffMatch ? '[' + matched[PATTERN_NAME_ITEMS[7].cd] + ']' + matched[PATTERN_NAME_ITEMS[8].cd] : '',
+
+                            //[subDepartment[0]]: isSubStaffMatch ? '[' + matched[PATTERN_NAME_ITEMS[9].cd] + ']' + matched[PATTERN_NAME_ITEMS[10].cd] : '', // 副担当者所属
+                            [subDepartment[0]]: isSubStaffMatch && STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.organization.cd][0] ? STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.organization.cd][0].name : '', // 副担当者所属
+                            [subDepartment[1]]: isSubStaffMatch && STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.organization.cd][0] ? STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.organization.cd][0].code : '',
+                            [subDepartment[2]]: isSubStaffMatch && STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.organization.cd][0] ? STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.organization.cd][0].name : '',
+                            //[wkSubDepartment]: isSubStaffMatch ? '[' + matched[PATTERN_NAME_ITEMS[9].cd] + ']' + matched[PATTERN_NAME_ITEMS[10].cd] : '',
+                        };
+                        const updatedItem = {
+                            ...item,
+                            datas: {
+                                ...item.datas,
+                                ['pattern']: [...(item.datas['pattern'] || []), wk],
+                            },
+                        };
+
+                        // バックアップ表示
+                        if (matched && matched['OLD']) {
+                            //console.log('OLD');
+                            updatedItem.datas['pattern'][cnt - 1]['OLD'] = {
+                                ...updatedItem.datas['pattern'][cnt - 1]['OLD'],
+                                [PATTERN_NAME_ITEMS[1].cd]: matched['OLD'][PATTERN_NAME_ITEMS[1].cd],
+                                [PATTERN_NAME_ITEMS[2].cd]: matched['OLD'][PATTERN_NAME_ITEMS[2].cd],
+                                [PATTERN_NAME_ITEMS[3].cd]: matched['OLD'][PATTERN_NAME_ITEMS[3].cd],
+                                [PATTERN_NAME_ITEMS[4].cd]: matched['OLD'][PATTERN_NAME_ITEMS[4].cd],
+                                [PATTERN_NAME_ITEMS[7].cd]: matched['OLD'][PATTERN_NAME_ITEMS[7].cd],
+                                [PATTERN_NAME_ITEMS[8].cd]: matched['OLD'][PATTERN_NAME_ITEMS[8].cd],
+                                [PATTERN_NAME_ITEMS[9].cd]: matched['OLD'][PATTERN_NAME_ITEMS[9].cd],
+                                [PATTERN_NAME_ITEMS[10].cd]: matched['OLD'][PATTERN_NAME_ITEMS[10].cd],
+                                [SELECTTYPE_NAME_ITEMS[0].cd]: matched['OLD'][PATTERN_NAME_ITEMS[1].cd] ? '[' + matched['OLD'][PATTERN_NAME_ITEMS[1].cd] + ']' + matched['OLD'][PATTERN_NAME_ITEMS[2].cd] : '',
+                                [SELECTTYPE_NAME_ITEMS[1].cd]: matched['OLD'][PATTERN_NAME_ITEMS[3].cd] ? '[' + matched['OLD'][PATTERN_NAME_ITEMS[3].cd] + ']' + matched['OLD'][PATTERN_NAME_ITEMS[4].cd] : '',
+                                [SELECTTYPE_NAME_ITEMS[3].cd]: matched['OLD'][PATTERN_NAME_ITEMS[8].cd] ? matched['OLD'][PATTERN_NAME_ITEMS[8].cd] : '',
+                                [SELECTTYPE_NAME_ITEMS[4].cd]: matched['OLD'][PATTERN_NAME_ITEMS[10].cd] ? matched['OLD'][PATTERN_NAME_ITEMS[10].cd] : '',
+                            };
+                        }
+                        acc.push(updatedItem);
+                        return acc;
+                    }, []);
+                    STATE.listData.datas = updatedArray;
+
+                    // パターン追加
+                    STATE.patternNames.names.push({
+                        index: cnt,
+                        name: pattern.clickName,
+                        id: patterns[pattern.clickNo].id,
+                        revision: patterns[pattern.clickNo].revision,
+                        titleColor: PATTERN_TITLE_COLOR[cnt - 1],
+                        itemsColor: PATTERN_ITEMS_COLOR[cnt - 1], // アイテムカラーを追加
+                        backupDispFlg: false,
+                        colspan: 4, // 項目数
+                        isChanged: false, // 変更有無
+                    });
+                    STATE.patternNames.len = cnt;
+
+                    // OLDの有無とOLDのデータがnullかどうかで、バックアップの有無を設定
+                    if (STATE.listData.datas[0].datas['pattern'][cnt - 1].OLD) {
+                        if (patterns[STATE.listDataPattern[index].clickNo].backup !== '') {
+                            STATE.patternNames.names[cnt - 1].backupDisableFlg = false;
                         } else {
                             STATE.patternNames.names[cnt - 1].backupDisableFlg = true;
                         }
+                    } else {
+                        STATE.patternNames.names[cnt - 1].backupDisableFlg = true;
+                    }
 
-                        // 絞込追加
-                        STATE.filters['新_' + SELECTTYPE_NAME_ITEMS[0].cd + '_' + cnt] = '';
-                        STATE.filters['新_' + SELECTTYPE_NAME_ITEMS[1].cd + '_' + cnt] = '';
-                        STATE.filters['新_' + SELECTTYPE_NAME_ITEMS[3].cd + '_' + cnt] = '';
-                        STATE.filters['新_' + SELECTTYPE_NAME_ITEMS[4].cd + '_' + cnt] = '';
+                    // 絞込追加
+                    STATE.filters['新_' + SELECTTYPE_NAME_ITEMS[0].cd + '_' + cnt] = '';
+                    STATE.filters['新_' + SELECTTYPE_NAME_ITEMS[1].cd + '_' + cnt] = '';
+                    STATE.filters['新_' + SELECTTYPE_NAME_ITEMS[3].cd + '_' + cnt] = '';
+                    STATE.filters['新_' + SELECTTYPE_NAME_ITEMS[4].cd + '_' + cnt] = '';
 
-                        // 初期表示時に全ての複数選択フィルターを全選択状態にする
-                        const select = ['新_' + SELECTTYPE_NAME_ITEMS[0].cd + '_' + cnt, '新_' + SELECTTYPE_NAME_ITEMS[1].cd + '_' + cnt, '新_' + SELECTTYPE_NAME_ITEMS[3].cd + '_' + cnt, '新_' + SELECTTYPE_NAME_ITEMS[4].cd + '_' + cnt];
-                        STATE.listData.items.forEach((item) => {
-                            // 単一選択フィールドとテキスト入力フィールドを除外
-                            if (isSelectType(item.label, item.type) && select.includes(item.code)) {
-                                const allOptions = getUniqueOptions(item.code);
-                                const allValues = [...allOptions.map((opt) => opt.value), EMPTY.value];
-                                STATE.multiSelectFilters[item.code] = allValues;
-                            }
-                        });
+                    // 初期表示時に全ての複数選択フィルターを全選択状態にする
+                    const select = ['新_' + SELECTTYPE_NAME_ITEMS[0].cd + '_' + cnt, '新_' + SELECTTYPE_NAME_ITEMS[1].cd + '_' + cnt, '新_' + SELECTTYPE_NAME_ITEMS[3].cd + '_' + cnt, '新_' + SELECTTYPE_NAME_ITEMS[4].cd + '_' + cnt];
+                    STATE.listData.items.forEach((item) => {
+                        // 単一選択フィールドとテキスト入力フィールドを除外
+                        if (isSelectType(item.label, item.type) && select.includes(item.code)) {
+                            const allOptions = getUniqueOptions(item.code);
+                            const allValues = [...allOptions.map((opt) => opt.value), EMPTY.value];
+                            STATE.multiSelectFilters[item.code] = allValues;
+                        }
                     });
+                });
 
-                    // 一括置換設定を再構築（選択解除されたパターン分は破棄）
-                    STATE.bulkReplaceSettings = nextBulkReplaceSettings;
-                } catch (error) {
-                    console.error('openPattern取得失敗:', error);
-                }
+                // 一括置換設定を再構築（選択解除されたパターン分は破棄）
+                STATE.bulkReplaceSettings = nextBulkReplaceSettings;
+                /*} catch (error) {
+                    
+                }*/
 
                 // stickyヘッダー対応
                 nextTick(() => {
@@ -1630,14 +1646,26 @@
                     // バックアップ用にデータを退避
                     // 更新対象から担当者・副担当者関連のデータを抽出
                     const updateData = updateList.map((data) => {
+                        // バックアップ復元時の担当者が存在するかチェック
+                        const backupStaffName = data.datas['pattern'][no].OLD[staffCode[1]];
+                        const backupSubStaffName = data.datas['pattern'][no].OLD[subStaffCode[1]];
+
+                        // 担当者マスタから担当者名を検索
+                        const staffExists = STATE.selectStaffs.some((staff) => staff[STAFFMASTER_FIELD.staff.cd] === backupStaffName);
+                        const subStaffExists = STATE.selectStaffs.some((staff) => staff[STAFFMASTER_FIELD.staff.cd] === backupSubStaffName);
+
+                        // 存在しなければ空にする
+                        const staffValue = staffExists ? backupStaffName : '';
+                        const subStaffValue = subStaffExists ? backupSubStaffName : '';
+
                         return {
                             [CUSTOMERCHART_FIELD.id.writeCd]: data.datas[EXCEPT_ITEMS[0]], // レコードID
                             //[CUSTOMERCHART_FIELD.id.writeCd]: 1000, // レコードID（テスト用）
                             [CUSTOMERCHART_FIELD.revision.writeCd]: data.datas[EXCEPT_ITEMS[1]], // リビジョン
                             record: {
                                 //[CUSTOMERCHART_FIELD.staff.cd]: { value: data.datas[staffCode[0]], lookup: true }, // 担当者コード
-                                [CUSTOMERCHART_FIELD.staff.cd]: { value: data.datas['pattern'][no].OLD[staffCode[1]], lookup: true }, // 担当者
-                                [CUSTOMERCHART_FIELD.subStaff.cd]: { value: data.datas['pattern'][no].OLD[subStaffCode[1]], lookup: true }, // 副担当者
+                                [CUSTOMERCHART_FIELD.staff.cd]: { value: staffValue, lookup: true }, // 担当者
+                                [CUSTOMERCHART_FIELD.subStaff.cd]: { value: subStaffValue, lookup: true }, // 副担当者
                             },
                         };
                     });
@@ -1718,26 +1746,52 @@
                     const updatedArrays = ref.records.reduce((acc, r) => {
                         return acc.map((data) => {
                             if (data.datas[EXCEPT_ITEMS[0]] === r.id) {
+                                // バックアップ復元時の担当者と所属が存在するかチェック
+                                const backupStaffName = data.datas['pattern'][no]['OLD'][staffCode[1]];
+                                const backupSubStaffName = data.datas['pattern'][no]['OLD'][subStaffCode[1]];
+
+                                const staffExists = STATE.selectStaffs.some((staff) => staff[STAFFMASTER_FIELD.staff.cd] === backupStaffName);
+                                const subStaffExists = STATE.selectStaffs.some((staff) => staff[STAFFMASTER_FIELD.staff.cd] === backupSubStaffName);
+
+                                // 存在しなければ空にする
+                                const staffValue = staffExists ? data.datas['pattern'][no]['OLD'][staffCode[1]] : '';
+                                const staffCodeValue = staffExists ? data.datas['pattern'][no]['OLD'][staffCode[0]] : '';
+                                const staffNameValue = staffExists ? data.datas['pattern'][no]['OLD'][staffCode[2]] : '';
+
+                                const subStaffValue = subStaffExists ? data.datas['pattern'][no]['OLD'][subStaffCode[1]] : '';
+                                const subStaffCodeValue = subStaffExists ? data.datas['pattern'][no]['OLD'][subStaffCode[0]] : '';
+                                const subStaffNameValue = subStaffExists ? data.datas['pattern'][no]['OLD'][subStaffCode[2]] : '';
+
+                                // 担当者が空の場合のみ所属も空に設定
+                                const departmentCodeValue = staffValue ? data.datas['pattern'][no]['OLD'][departmentCode[0]] : '';
+                                const departmentNameValue = staffValue ? data.datas['pattern'][no]['OLD'][departmentCode[1]] : '';
+                                const departmentLabelValue = staffValue ? data.datas['pattern'][no]['OLD'][departmentCode[2]] : '';
+
+                                // 副担当者が空の場合のみ副所属も空に設定
+                                const subDepartmentCodeValue = subStaffValue ? data.datas['pattern'][no]['OLD'][subDepartmentCode[0]] : '';
+                                const subDepartmentNameValue = subStaffValue ? data.datas['pattern'][no]['OLD'][subDepartmentCode[1]] : '';
+                                const subDepartmentLabelValue = subStaffValue ? data.datas['pattern'][no]['OLD'][subDepartmentCode[2]] : '';
+
                                 return {
                                     ...data,
                                     datas: {
                                         ...data.datas,
                                         [EXCEPT_ITEMS[1]]: r.revision,
-                                        [PATTERN_NAME_ITEMS[1].cd]: data.datas['pattern'][no]['OLD'][staffCode[0]], // 担当者コード
-                                        [PATTERN_NAME_ITEMS[2].cd]: data.datas['pattern'][no]['OLD'][staffCode[1]], // 担当者
-                                        [SELECTTYPE_NAME_ITEMS[0].cd]: data.datas['pattern'][no]['OLD'][staffCode[2]], // 担当者コード名
+                                        [PATTERN_NAME_ITEMS[1].cd]: staffCodeValue, // 担当者コード
+                                        [PATTERN_NAME_ITEMS[2].cd]: staffValue, // 担当者
+                                        [SELECTTYPE_NAME_ITEMS[0].cd]: staffNameValue, // 担当者コード名
 
-                                        [PATTERN_NAME_ITEMS[7].cd]: data.datas['pattern'][no]['OLD'][departmentCode[0]], // 担当者所属コード
-                                        [PATTERN_NAME_ITEMS[8].cd]: data.datas['pattern'][no]['OLD'][departmentCode[1]], // 担当者所属
-                                        [SELECTTYPE_NAME_ITEMS[3].cd]: data.datas['pattern'][no]['OLD'][departmentCode[2]], // 担当者所属コード名
+                                        [PATTERN_NAME_ITEMS[7].cd]: departmentCodeValue, // 担当者所属コード
+                                        [PATTERN_NAME_ITEMS[8].cd]: departmentNameValue, // 担当者所属
+                                        [SELECTTYPE_NAME_ITEMS[3].cd]: departmentLabelValue, // 担当者所属コード名
 
-                                        [PATTERN_NAME_ITEMS[3].cd]: data.datas['pattern'][no]['OLD'][subStaffCode[0]], // 副担当者コード
-                                        [PATTERN_NAME_ITEMS[4].cd]: data.datas['pattern'][no]['OLD'][subStaffCode[1]], // 副担当者
-                                        [SELECTTYPE_NAME_ITEMS[1].cd]: data.datas['pattern'][no]['OLD'][subStaffCode[2]], // 副担当者コード名
+                                        [PATTERN_NAME_ITEMS[3].cd]: subStaffCodeValue, // 副担当者コード
+                                        [PATTERN_NAME_ITEMS[4].cd]: subStaffValue, // 副担当者
+                                        [SELECTTYPE_NAME_ITEMS[1].cd]: subStaffNameValue, // 副担当者コード名
 
-                                        [PATTERN_NAME_ITEMS[9].cd]: data.datas['pattern'][no]['OLD'][subDepartmentCode[0]], // 副担当者所属コード
-                                        [PATTERN_NAME_ITEMS[10].cd]: data.datas['pattern'][no]['OLD'][subDepartmentCode[1]], // 副担当者所属
-                                        [SELECTTYPE_NAME_ITEMS[4].cd]: data.datas['pattern'][no]['OLD'][subDepartmentCode[2]], // 副担当者所属コード名
+                                        [PATTERN_NAME_ITEMS[9].cd]: subDepartmentCodeValue, // 副担当者所属コード
+                                        [PATTERN_NAME_ITEMS[10].cd]: subDepartmentNameValue, // 副担当者所属
+                                        [SELECTTYPE_NAME_ITEMS[4].cd]: subDepartmentLabelValue, // 副担当者所属コード名
                                     },
                                 };
                             } else {
@@ -1834,7 +1888,7 @@
 
                     // 更新データ作成（パターンのデータとバックアップしたデータの比較）
                     const updateList = STATE.listData.datas.filter(
-                        (data) => data.datas['pattern'][no][staffCode[0]] !== data.datas['pattern'][no].OLD[staff[0]] || data.datas['pattern'][no][subStaffCode[0]] !== data.datas['pattern'][no].OLD[subStaff[0]] || data.datas['pattern'][no][staffCode[1]] !== data.datas['pattern'][no].OLD[staff[1]] || data.datas['pattern'][no][subStaffCode[1]] !== data.datas['pattern'][no].OLD[subStaff[1]]
+                        (data) => data.datas['pattern'][no][staffCode[0]] !== data.datas['pattern'][no].OLD[staff[0]] || data.datas['pattern'][no][subStaffCode[0]] !== data.datas['pattern'][no].OLD[subStaff[0]] || data.datas['pattern'][no][staffCode[1]] !== data.datas['pattern'][no].OLD[staff[1]] || data.datas['pattern'][no][subStaffCode[1]] !== data.datas['pattern'][no].OLD[subStaff[1]],
                     );
 
                     const updateData = updateList.map((data) => {
@@ -2717,7 +2771,7 @@
             };
 
             /**
-             * 列表示設定
+             * 列表示非表示設定
              */
             const toggleColumnSettings = async () => {
                 // チェックボックス付きの項目リストHTMLを作成
@@ -3024,7 +3078,7 @@
             };
 
             /**
-             * 担当者集計
+             * 担当者集計（不使用）
              * @param {number} flg 0:担当者集計　1:所属集計
              */
             const totalCustomersPerStaff = async (flg) => {
@@ -3132,8 +3186,8 @@
                         totalStaff.value.flatMap((group) =>
                             group.map((item) => {
                                 return { code: item.code, name: item.name };
-                            })
-                        )
+                            }),
+                        ),
                     ),
                 ];
 
@@ -3485,7 +3539,7 @@
                             // [0000]ああああ → ああああ
                             const nameOnly = opt.label.replace(/^\[.*?\]\s*/, '');
                             return [opt.value, nameOnly];
-                        })
+                        }),
                     );
 
                     // __EMPTY__も追加
@@ -3734,7 +3788,7 @@
                         }
                         let cellValue = '';
                         if (flg === 0) {
-                            cellValue = String((key === nm ? item.datas[cd] : item.datas[key] ?? '') ?? '');
+                            cellValue = String((key === nm ? item.datas[cd] : (item.datas[key] ?? '')) ?? '');
                         } else if (flg === 1) {
                             // パターンの場合
                             cellValue = String(item.datas['pattern'][num - 1]?.[cd] ?? '');
@@ -3790,7 +3844,7 @@
                         await dispColitem();
                     }
                 },
-                { flush: 'post' }
+                { flush: 'post' },
             );
 
             /**
@@ -3812,7 +3866,7 @@
                     .toLowerCase() // 大文字小文字を小文字に統一
                     .replace(
                         /[\u30A1-\u30F6]/g,
-                        (ch) => String.fromCharCode(ch.charCodeAt(0) - 0x60) // カタカナをひらがなに変換
+                        (ch) => String.fromCharCode(ch.charCodeAt(0) - 0x60), // カタカナをひらがなに変換
                     );
             }
 
@@ -3923,7 +3977,7 @@
                                 //label: '[' + org.code + ']' + org.name,
                                 label: org.name,
                                 value: org.code,
-                            }))
+                            })),
                         );
                     if (!departmentFlg.some((f) => f)) {
                         // STATE.listData.datasにあってpairsにない担当者コード・担当者名をpairsの最後に追加
@@ -5116,7 +5170,7 @@
                     return;
                 }
 
-                // 顧客カルテのフィールド選択肢を取得
+                // 顧客カルテのフィールド選択肢を取得（選択項目を取得）
                 try {
                     const fieldMap = await utils.recordUtils.fetchFieldDefinitions(utils.constants.CUSTOMER_APP_ID);
                     STATE.listData.items.forEach((item) => {
@@ -5154,6 +5208,13 @@
                     });
                 } catch (error) {
                     console.error('フィールド情報の取得に失敗しました:', error);
+
+                    Swal.fire({
+                        title: '選択項目の取得失敗',
+                        text: '顧客カルテの選択項目の取得に失敗しました。',
+                        icon: 'error',
+                        confirmButtonText: '閉じる',
+                    });
                 }
 
                 // 整合性チェック
