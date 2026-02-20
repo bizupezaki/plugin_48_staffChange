@@ -1,6 +1,10 @@
 #bz_update_staffs_container {
+    $fixed-cols: 5; // SCSS variable for static usage in nth-child
     --hc-height: 0px;
-    --top: 48px;
+    --top: 48px; // 48px ヘッダー高さ分
+    --col-width: 0px;
+    --fixed-cols: #{$fixed-cols}; // Use SCSS variable
+    --left: 0px;
 
     margin: 20px;
 
@@ -20,27 +24,37 @@
         white-space: nowrap;
     }
 
-    #bz_header {
+    input[type="text"] {
+        width: 0px;
+        visibility: hidden;
+    }
+
+    #bz_header_buttons {
         position: sticky;
         top: var(--top);
         background: #ffffff;
-        z-index: 1;
+        z-index: 20;
     }
 
     table.bz_table_def {
         border-collapse: separate;
         border-spacing: 0;
 
-        border-top: 1px solid #999;
-        border-left: 1px solid #999;
+        border-top: 1px solid #999999;
+        border-left: 1px solid #999999;
+        background: #ffffff;
+
+        white-space: nowrap;
 
         thead {
-            background-color: #eee;
+            background-color: #eeeeee;
 
             position: sticky;
             border-collapse: separate;
             top: calc(var(--hc-height) + var(--top));
-            z-index: 2;
+            z-index: 20;
+
+            white-space: nowrap;
         }
 
         th,
@@ -48,6 +62,8 @@
             border-top-style: none;
             border-left-style: none;
             white-space: nowrap;
+            border-collapse: separate;
+            background: #ffffff;
 
             a.no-color-change {
                 color: inherit;
@@ -58,10 +74,110 @@
             }
         }
 
+        th:nth-child(n):nth-child(-n+#{$fixed-cols}),
+        td:nth-child(n):nth-child(-n+#{$fixed-cols}) {
+            z-index: 3;
+            border-right: 1px solid #999999;
+        }
+
+        th:nth-child(1),
+        td:nth-child(1) {
+            left: calc(var(--col-width) * 0);
+            z-index: 4;
+        }
+
         tr {
             &.bz_tr_diselect {
-                background-color: #ccc;
+                background-color: #cccccc;
             }
         }
+
+    }
+
+    .items-header {
+        background-color: #eeeeee !important;
+        z-index: 30;
+        box-shadow: 1px 0 0 0 #eeeeee; // 左右の隙間を埋める
+    }
+
+    .items-body {
+        background: #ffffff;
+        z-index: 1;
+        box-shadow: 1px 0 0 0 #ffffff; // 左右の隙間を埋める
+    }
+
+    // 複数選択ドロップダウン関連スタイル
+    .multi-select-container {
+        position: relative;
+        min-width: 100px;
+    }
+
+    .multi-select-button {
+        width: 100%;
+        text-align: left;
+        padding: 4px 20px 4px 4px;
+        border: 1px solid #cccccc;
+        background: white;
+        cursor: pointer;
+        position: relative;
+    }
+
+    .multi-select-arrow {
+        position: absolute;
+        right: 4px;
+        top: 50%;
+        transform: translateY(-50%); //縦中央
+    }
+
+    .multi-select-dropdown {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        min-width: 100px;
+        background: white;
+        border: 1px solid #cccccc;
+        border-top: none;
+        max-height: 200px;
+        overflow-y: auto;
+        z-index: 0;
+    }
+
+    .multi-select-option {
+        display: block;
+        padding: 4px 8px;
+        cursor: pointer;
+        font-size: 12px;
+        text-align: left;
+        border-top: 1px solid #eeeeee;
+
+        &:first-child {
+            border-top: none;
+        }
+
+        input[type="checkbox"] {
+            margin-right: 4px;
+        }
+    }
+}
+
+.sort-btn {
+    cursor: pointer;
+    font-size: 13px;
+    margin-left: 4px;
+    color: #888888;
+}
+
+.sort-btn.active {
+    color: #0000ff;
+    font-weight: bold;
+}
+
+button.bz_bt_def.bz_bt_cancel {
+    background-color: #6e7881;
+    border-color: #6e7881;
+    color: #fff;
+
+    &:hover {
+        background-color: #5a6268;
     }
 }

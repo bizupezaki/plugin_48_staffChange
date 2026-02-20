@@ -29,7 +29,7 @@
 
     // console.log(CONF);
 
-    // 担当者マスタのフィールド定義（appID:93）
+    // 担当者マスタのフィールド定義
     const STAFFMASTER_FIELD = {
         id: { readCd: '$id', writeCd: 'id', type: '__ID__', name: '' },
         revision: { readCd: '$revision', writeCd: 'revision', type: '__REVISION__', name: '' },
@@ -44,7 +44,7 @@
         hiddenFlag: { cd: '非表示フラグ', type: 'CHECK_BOX', name: '非表示フラグ', value: ['ON'] },
     };
 
-    // 顧客カルテのフィールド定義（appID:85）
+    // 顧客カルテのフィールド定義
     const CUSTOMERCHART_FIELD = {
         id: { readCd: '$id', writeCd: 'id', type: '__ID__', name: '' },
         revision: { readCd: '$revision', writeCd: 'revision', type: '__REVISION__', name: '' },
@@ -66,7 +66,7 @@
         subStaffAccount: { cd: '副担当者アカウント', type: 'USER_SELECT', name: '副担当者アカウント' },
     };
 
-    // 担当者変更のフィールド定義（appID:324）
+    // 担当者変更のフィールド定義
     const STAFF_CHANGE_FIELDCD = {
         jsonData: { cd: 'JSON', type: 'MULTI_LINE_TEXT', name: 'JSON' },
         patternName: { cd: 'パターン名', type: 'SINGLE_LINE_TEXT', name: 'パターン名' },
@@ -195,6 +195,8 @@
                 computedWidth: {}, // 計算フィールド
                 bulkReplaceSettings: {}, // パターンごとの一括置換設定を保存
                 visibleColumns: {}, // 列表示設定
+                customerAppID: utils.constants.CUSTOMER_APP_ID, // 顧客カルテアプリのアプリID
+                staffAppID: utils.constants.STAFF_APP_ID, // 担当者アプリのアプリID
             });
 
             // 項目名除外
@@ -516,6 +518,9 @@
             const addPattern = async () => {
                 //const fields = await utils.common.getFieldMap(utils.constants.THIS_APP_ID);
                 //console.log('fields:', fields);
+                // 時間計測
+                //const start = performance.now();
+
                 if (STATE.patternNames.len >= MAX_PATTERN) {
                     Swal.fire({
                         title: 'パターンの最大数超過',
@@ -541,162 +546,203 @@
                     return;
                 }
 
-                // JSONに変換
-                const filtered = STATE.listData.datas.map((item) => {
-                    return {
-                        [PATTERN_NAME_ITEMS[0].cd]: item.datas[PATTERN_NAME_ITEMS[0].cd], // $id
+                const processAddPattern = async () => {
+                    try {
+                        // JSONに変換
+                        const filtered = STATE.listData.datas.map((item) => {
+                            return {
+                                [PATTERN_NAME_ITEMS[0].cd]: item.datas[PATTERN_NAME_ITEMS[0].cd], // $id
 
-                        [PATTERN_NAME_ITEMS[1].cd]: item.datas[PATTERN_NAME_ITEMS[1].cd], // 担当者
-                        [PATTERN_NAME_ITEMS[2].cd]: item.datas[PATTERN_NAME_ITEMS[2].cd],
-                        [PATTERN_NAME_ITEMS[3].cd]: item.datas[PATTERN_NAME_ITEMS[3].cd], // 副担当者
-                        [PATTERN_NAME_ITEMS[4].cd]: item.datas[PATTERN_NAME_ITEMS[4].cd],
+                                [PATTERN_NAME_ITEMS[1].cd]: item.datas[PATTERN_NAME_ITEMS[1].cd], // 担当者
+                                [PATTERN_NAME_ITEMS[2].cd]: item.datas[PATTERN_NAME_ITEMS[2].cd],
+                                [PATTERN_NAME_ITEMS[3].cd]: item.datas[PATTERN_NAME_ITEMS[3].cd], // 副担当者
+                                [PATTERN_NAME_ITEMS[4].cd]: item.datas[PATTERN_NAME_ITEMS[4].cd],
 
-                        [PATTERN_NAME_ITEMS[7].cd]: item.datas[PATTERN_NAME_ITEMS[7].cd], // 担当者所属
-                        [PATTERN_NAME_ITEMS[8].cd]: item.datas[PATTERN_NAME_ITEMS[8].cd],
-                        [PATTERN_NAME_ITEMS[9].cd]: item.datas[PATTERN_NAME_ITEMS[9].cd], // 副担当者所属
-                        [PATTERN_NAME_ITEMS[10].cd]: item.datas[PATTERN_NAME_ITEMS[10].cd],
-                    };
-                });
-                const json = JSON.stringify(filtered, null, 2);
-                //console.log('JSON:', json);
-                // レコード登録
-                const insertData = {
-                    // id revision はinsert時に不要、仮にあったとしても無視される
-                    [STAFF_CHANGE_FIELDCD.jsonData.cd]: { value: json },
-                    [STAFF_CHANGE_FIELDCD.patternName.cd]: { value: result },
+                                [PATTERN_NAME_ITEMS[7].cd]: item.datas[PATTERN_NAME_ITEMS[7].cd], // 担当者所属
+                                [PATTERN_NAME_ITEMS[8].cd]: item.datas[PATTERN_NAME_ITEMS[8].cd],
+                                [PATTERN_NAME_ITEMS[9].cd]: item.datas[PATTERN_NAME_ITEMS[9].cd], // 副担当者所属
+                                [PATTERN_NAME_ITEMS[10].cd]: item.datas[PATTERN_NAME_ITEMS[10].cd],
+                            };
+                        });
+                        const json = JSON.stringify(filtered, null, 2);
+                        //console.log('JSON:', json);
+                        // レコード登録
+                        const insertData = {
+                            // id revision はinsert時に不要、仮にあったとしても無視される
+                            [STAFF_CHANGE_FIELDCD.jsonData.cd]: { value: json },
+                            [STAFF_CHANGE_FIELDCD.patternName.cd]: { value: result },
+                        };
+                        let ref = null;
+
+                        ref = await insertRecords([insertData], utils.constants.THIS_APP_ID);
+
+                        // 追加したパターンを一覧に表示
+                        let cnt = STATE.patternNames.len + 1;
+                        const staff = [SELECTTYPE_NAME_ITEMS[0].cd, PATTERN_NAME_ITEMS[1].cd, PATTERN_NAME_ITEMS[2].cd];
+                        const subStaff = [SELECTTYPE_NAME_ITEMS[1].cd, PATTERN_NAME_ITEMS[3].cd, PATTERN_NAME_ITEMS[4].cd];
+                        const department = [SELECTTYPE_NAME_ITEMS[3].cd, PATTERN_NAME_ITEMS[7].cd, PATTERN_NAME_ITEMS[8].cd];
+                        const subDepartment = [SELECTTYPE_NAME_ITEMS[4].cd, PATTERN_NAME_ITEMS[9].cd, PATTERN_NAME_ITEMS[10].cd];
+
+                        STATE.listData.items.push({ code: '新_' + SELECTTYPE_NAME_ITEMS[0].cd + '_' + cnt, label: SELECTTYPE_NAME_ITEMS[0].label, type: '' });
+                        STATE.listData.items.push({ code: '新_' + SELECTTYPE_NAME_ITEMS[3].cd + '_' + cnt, label: SELECTTYPE_NAME_ITEMS[3].label, type: '' });
+                        STATE.listData.items.push({ code: '新_' + SELECTTYPE_NAME_ITEMS[1].cd + '_' + cnt, label: SELECTTYPE_NAME_ITEMS[1].label, type: '' });
+                        STATE.listData.items.push({ code: '新_' + SELECTTYPE_NAME_ITEMS[4].cd + '_' + cnt, label: SELECTTYPE_NAME_ITEMS[4].label, type: '' });
+
+                        // 現役の担当者取得
+                        //const staffsCode = STATE.selectStaffs.map((s) => s[STAFFMASTER_FIELD.staffCode.cd]);
+
+                        // Map作成 (staffCode -> index) 高速化のため
+                        const staffMap = new Map();
+                        STATE.selectStaffs.forEach((s, i) => {
+                            staffMap.set(s[STAFFMASTER_FIELD.staffCode.cd], i);
+                        });
+
+                        // 所属コードのみ取得
+                        //const departmentsCode = STATE.selectStaffs.map((s) => s[STAFFMASTER_FIELD.organization.cd]).map((s) => s[0].code);
+
+                        // 高速化：reduceをやめてmapを使用し、スプレッド構文を避ける
+                        const updatedArrays = STATE.listData.datas.map((item) => {
+                            // 担当者コードと所属名は対になっているはずなので、担当者コードで現役かどうかをチェック
+                            //const idxS1 = staffsCode.indexOf(item.datas[PATTERN_NAME_ITEMS[1].cd]); // 担当者コード
+                            //const idxS2 = staffsCode.indexOf(item.datas[PATTERN_NAME_ITEMS[3].cd]); // 副担当者コード
+                            const staffCodeVal = item.datas[PATTERN_NAME_ITEMS[1].cd];
+                            const subStaffCodeVal = item.datas[PATTERN_NAME_ITEMS[3].cd];
+
+                            const idxS1 = staffMap.has(staffCodeVal) ? staffMap.get(staffCodeVal) : -1;
+                            const idxS2 = staffMap.has(subStaffCodeVal) ? staffMap.get(subStaffCodeVal) : -1;
+
+                            // 担当者・副担当者の完全一致チェック
+                            let isStaffMatch = false;
+                            if (idxS1 !== -1) {
+                                const masterName = STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.staff.cd];
+                                const itemName = item.datas[PATTERN_NAME_ITEMS[2].cd];
+                                if (masterName === itemName) {
+                                    isStaffMatch = true;
+                                }
+                            }
+
+                            let isSubStaffMatch = false;
+                            if (idxS2 !== -1) {
+                                const masterName = STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.staff.cd];
+                                const itemName = item.datas[PATTERN_NAME_ITEMS[4].cd];
+                                if (masterName === itemName) {
+                                    isSubStaffMatch = true;
+                                }
+                            }
+
+                            const wk = {
+                                index: cnt,
+                                [staff[0]]: isStaffMatch ? '[' + STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.staffCode.cd] + ']' + STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.staff.cd] : '', // 担当者
+                                [staff[1]]: isStaffMatch ? STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.staffCode.cd] : '',
+                                [staff[2]]: isStaffMatch ? STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.staff.cd] : '',
+                                //[wkStaff]: isStaffMatch ? item.datas[SELECTTYPE_NAME_ITEMS[0].cd] : '', // 選択値保存用
+
+                                [subStaff[0]]: isSubStaffMatch ? '[' + STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.staffCode.cd] + ']' + STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.staff.cd] : '', // 副担当者
+                                [subStaff[1]]: isSubStaffMatch ? STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.staffCode.cd] : '',
+                                [subStaff[2]]: isSubStaffMatch ? STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.staff.cd] : '',
+                                //[wkSubStaff]: isSubStaffMatch ? item.datas[SELECTTYPE_NAME_ITEMS[1].cd] : '',
+
+                                //[department[0]]: isStaffMatch ? item.datas[SELECTTYPE_NAME_ITEMS[3].cd] : '', // 担当者所属
+                                [department[0]]: isStaffMatch && STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.organization.cd][0] ? STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.organization.cd][0].name : '', // 担当者所属
+                                [department[1]]: isStaffMatch && STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.organization.cd][0] ? STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.organization.cd][0].code : '',
+                                [department[2]]: isStaffMatch && STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.organization.cd][0] ? STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.organization.cd][0].name : '',
+                                //[wkDepartment]: isStaffMatch ? item.datas[SELECTTYPE_NAME_ITEMS[3].cd] : '',
+
+                                //[subDepartment[0]]: isSubStaffMatch ? item.datas[SELECTTYPE_NAME_ITEMS[4].cd] : '', // 副担当者所属
+                                [subDepartment[0]]: isSubStaffMatch && STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.organization.cd][0] ? STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.organization.cd][0].name : '', // 副担当者所属
+                                [subDepartment[1]]: isSubStaffMatch && STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.organization.cd][0] ? STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.organization.cd][0].code : '',
+                                [subDepartment[2]]: isSubStaffMatch && STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.organization.cd][0] ? STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.organization.cd][0].name : '',
+                                //[wkSubDepartment]: isSubStaffMatch ? item.datas[SELECTTYPE_NAME_ITEMS[4].cd] : '',
+                            };
+
+                            /*const updatedItem = {
+                                ...item,
+                                datas: {
+                                    ...item.datas,
+                                    ['pattern']: [...(item.datas['pattern'] || []), wk],
+                                },
+                            };*/
+                            // パフォーマンス改善：スプレッド構文を避ける
+                            // item.datas.pattern に直接pushするのではなく、新しい配列を作成して割り当てる
+                            // item自体もクローンする必要がある（Vueのリアクティビティのため、あるいは参照を切るため）
+                            // ここでは shallow clone で十分
+                            const newItem = { ...item };
+                            const newDatas = { ...item.datas };
+                            const newPattern = item.datas['pattern'] ? [...item.datas['pattern']] : [];
+                            newPattern.push(wk);
+                            newDatas['pattern'] = newPattern;
+                            newItem.datas = newDatas;
+
+                            return newItem;
+                        });
+                        STATE.listData.datas = updatedArrays;
+
+                        STATE.patternNames.names.push({
+                            index: cnt,
+                            name: result,
+                            id: ref.records[0].id,
+                            revision: ref.records[0].revision,
+                            titleColor: PATTERN_TITLE_COLOR[cnt - 1],
+                            itemsColor: PATTERN_ITEMS_COLOR[cnt - 1],
+                            backupDispFlg: false,
+                            isChanged: false,
+                            colspan: 4, // 項目数
+                            //dispFlg: true,
+                        });
+
+                        // アイテムカラーを追加
+                        STATE.patternNames.len = cnt;
+
+                        // 絞込追加
+                        STATE.filters['新_' + SELECTTYPE_NAME_ITEMS[0].cd + '_' + cnt] = '';
+                        STATE.filters['新_' + SELECTTYPE_NAME_ITEMS[1].cd + '_' + cnt] = '';
+                        STATE.filters['新_' + SELECTTYPE_NAME_ITEMS[3].cd + '_' + cnt] = '';
+                        STATE.filters['新_' + SELECTTYPE_NAME_ITEMS[4].cd + '_' + cnt] = '';
+
+                        // 初期表示時に全ての複数選択フィルターを全選択状態にする
+                        const select = ['新_' + SELECTTYPE_NAME_ITEMS[0].cd + '_' + cnt, '新_' + SELECTTYPE_NAME_ITEMS[1].cd + '_' + cnt, '新_' + SELECTTYPE_NAME_ITEMS[3].cd + '_' + cnt, '新_' + SELECTTYPE_NAME_ITEMS[4].cd + '_' + cnt];
+                        STATE.listData.items.forEach((item) => {
+                            // 単一選択フィールドとテキスト入力フィールドを除外
+                            if (isSelectType(item.label, item.type) && select.includes(item.code)) {
+                                const allOptions = getUniqueOptions(item.code);
+                                const allValues = [...allOptions.map((opt) => opt.value), EMPTY.value];
+                                STATE.multiSelectFilters[item.code] = allValues;
+                            }
+                        });
+                        // stickyヘッダー対応
+                        nextTick(() => {
+                            bizupUtil.common.setStickyHeaderHeight(CONTAINER_ID, 'bz_header_buttons');
+
+                            // 列固定
+                            dispColitem();
+                        });
+
+                        // 成功時、loadingを閉じる
+                        Swal.close();
+                    } catch (error) {
+                        console.error('パターン追加に失敗しました。', error);
+                        // エラー表示
+                        Swal.fire({
+                            title: 'パターンの追加失敗',
+                            text: 'パターンの追加に失敗しました。',
+                            icon: 'error',
+                            confirmButtonText: '閉じる',
+                        });
+                    }
                 };
-                let ref = null;
-                try {
-                    ref = await insertRecords([insertData], utils.constants.THIS_APP_ID);
-                } catch (error) {
-                    console.error('パターン追加に失敗しました。', error.error);
-                    //error.error.headers['x-cybozu-error']
-                    //const headerCode = error.error?.headers?.['x-cybozu-error'];
-                    Swal.fire({
-                        title: 'パターンの追加失敗',
-                        text: 'パターンの追加に失敗しました。',
-                        icon: 'error',
-                        confirmButtonText: '閉じる',
-                    });
-                }
 
-                // 追加したパターンを一覧に表示
-                let cnt = STATE.patternNames.len + 1;
-                const staff = [SELECTTYPE_NAME_ITEMS[0].cd, PATTERN_NAME_ITEMS[1].cd, PATTERN_NAME_ITEMS[2].cd];
-                const subStaff = [SELECTTYPE_NAME_ITEMS[1].cd, PATTERN_NAME_ITEMS[3].cd, PATTERN_NAME_ITEMS[4].cd];
-                const department = [SELECTTYPE_NAME_ITEMS[3].cd, PATTERN_NAME_ITEMS[7].cd, PATTERN_NAME_ITEMS[8].cd];
-                const subDepartment = [SELECTTYPE_NAME_ITEMS[4].cd, PATTERN_NAME_ITEMS[9].cd, PATTERN_NAME_ITEMS[10].cd];
-
-                STATE.listData.items.push({ code: '新_' + SELECTTYPE_NAME_ITEMS[0].cd + '_' + cnt, label: SELECTTYPE_NAME_ITEMS[0].label, type: '' });
-                STATE.listData.items.push({ code: '新_' + SELECTTYPE_NAME_ITEMS[3].cd + '_' + cnt, label: SELECTTYPE_NAME_ITEMS[3].label, type: '' });
-                STATE.listData.items.push({ code: '新_' + SELECTTYPE_NAME_ITEMS[1].cd + '_' + cnt, label: SELECTTYPE_NAME_ITEMS[1].label, type: '' });
-                STATE.listData.items.push({ code: '新_' + SELECTTYPE_NAME_ITEMS[4].cd + '_' + cnt, label: SELECTTYPE_NAME_ITEMS[4].label, type: '' });
-
-                // 現役の担当者取得
-                const staffsCode = STATE.selectStaffs.map((s) => s[STAFFMASTER_FIELD.staffCode.cd]);
-                // 所属コードのみ取得
-                //const departmentsCode = STATE.selectStaffs.map((s) => s[STAFFMASTER_FIELD.organization.cd]).map((s) => s[0].code);
-
-                const updatedArrays = STATE.listData.datas.reduce((acc, item) => {
-                    // 担当者コードと所属名は対になっているはずなので、担当者コードで現役かどうかをチェック
-                    const idxS1 = staffsCode.indexOf(item.datas[PATTERN_NAME_ITEMS[1].cd]); // 担当者コード
-                    const idxS2 = staffsCode.indexOf(item.datas[PATTERN_NAME_ITEMS[3].cd]); // 副担当者コード
-
-                    // 担当者・副担当者の完全一致チェック
-                    let isStaffMatch = false;
-                    if (idxS1 !== -1) {
-                        const masterName = STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.staff.cd];
-                        const itemName = item.datas[PATTERN_NAME_ITEMS[2].cd];
-                        if (masterName === itemName) {
-                            isStaffMatch = true;
-                        }
-                    }
-
-                    let isSubStaffMatch = false;
-                    if (idxS2 !== -1) {
-                        const masterName = STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.staff.cd];
-                        const itemName = item.datas[PATTERN_NAME_ITEMS[4].cd];
-                        if (masterName === itemName) {
-                            isSubStaffMatch = true;
-                        }
-                    }
-
-                    const wk = {
-                        index: cnt,
-                        [staff[0]]: isStaffMatch ? '[' + STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.staffCode.cd] + ']' + STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.staff.cd] : '', // 担当者
-                        [staff[1]]: isStaffMatch ? STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.staffCode.cd] : '',
-                        [staff[2]]: isStaffMatch ? STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.staff.cd] : '',
-                        //[wkStaff]: isStaffMatch ? item.datas[SELECTTYPE_NAME_ITEMS[0].cd] : '', // 選択値保存用
-
-                        [subStaff[0]]: isSubStaffMatch ? '[' + STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.staffCode.cd] + ']' + STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.staff.cd] : '', // 副担当者
-                        [subStaff[1]]: isSubStaffMatch ? STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.staffCode.cd] : '',
-                        [subStaff[2]]: isSubStaffMatch ? STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.staff.cd] : '',
-                        //[wkSubStaff]: isSubStaffMatch ? item.datas[SELECTTYPE_NAME_ITEMS[1].cd] : '',
-
-                        //[department[0]]: isStaffMatch ? item.datas[SELECTTYPE_NAME_ITEMS[3].cd] : '', // 担当者所属
-                        [department[0]]: isStaffMatch && STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.organization.cd][0] ? STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.organization.cd][0].name : '', // 担当者所属
-                        [department[1]]: isStaffMatch && STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.organization.cd][0] ? STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.organization.cd][0].code : '',
-                        [department[2]]: isStaffMatch && STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.organization.cd][0] ? STATE.selectStaffs[idxS1][STAFFMASTER_FIELD.organization.cd][0].name : '',
-                        //[wkDepartment]: isStaffMatch ? item.datas[SELECTTYPE_NAME_ITEMS[3].cd] : '',
-
-                        //[subDepartment[0]]: isSubStaffMatch ? item.datas[SELECTTYPE_NAME_ITEMS[4].cd] : '', // 副担当者所属
-                        [subDepartment[0]]: isSubStaffMatch && STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.organization.cd][0] ? STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.organization.cd][0].name : '', // 副担当者所属
-                        [subDepartment[1]]: isSubStaffMatch && STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.organization.cd][0] ? STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.organization.cd][0].code : '',
-                        [subDepartment[2]]: isSubStaffMatch && STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.organization.cd][0] ? STATE.selectStaffs[idxS2][STAFFMASTER_FIELD.organization.cd][0].name : '',
-                        //[wkSubDepartment]: isSubStaffMatch ? item.datas[SELECTTYPE_NAME_ITEMS[4].cd] : '',
-                    };
-
-                    const updatedItem = {
-                        ...item,
-                        datas: {
-                            ...item.datas,
-                            ['pattern']: [...(item.datas['pattern'] || []), wk],
-                        },
-                    };
-                    acc.push(updatedItem);
-                    return acc;
-                }, []);
-                STATE.listData.datas = updatedArrays;
-
-                STATE.patternNames.names.push({
-                    index: cnt,
-                    name: result,
-                    id: ref.records[0].id,
-                    revision: ref.records[0].revision,
-                    titleColor: PATTERN_TITLE_COLOR[cnt - 1],
-                    itemsColor: PATTERN_ITEMS_COLOR[cnt - 1],
-                    backupDispFlg: false,
-                    isChanged: false,
-                    colspan: 4, // 項目数
-                    //dispFlg: true,
+                // loading表示
+                Swal.fire({
+                    title: 'パターンを追加中...',
+                    allowOutsideClick: false,
+                    didOpen: async () => {
+                        Swal.showLoading();
+                        await new Promise((resolve) => setTimeout(resolve, 100));
+                        await processAddPattern();
+                    },
                 });
-
-                // アイテムカラーを追加
-                STATE.patternNames.len = cnt;
-
-                // 絞込追加
-                STATE.filters['新_' + SELECTTYPE_NAME_ITEMS[0].cd + '_' + cnt] = '';
-                STATE.filters['新_' + SELECTTYPE_NAME_ITEMS[1].cd + '_' + cnt] = '';
-                STATE.filters['新_' + SELECTTYPE_NAME_ITEMS[3].cd + '_' + cnt] = '';
-                STATE.filters['新_' + SELECTTYPE_NAME_ITEMS[4].cd + '_' + cnt] = '';
-
-                // 初期表示時に全ての複数選択フィルターを全選択状態にする
-                const select = ['新_' + SELECTTYPE_NAME_ITEMS[0].cd + '_' + cnt, '新_' + SELECTTYPE_NAME_ITEMS[1].cd + '_' + cnt, '新_' + SELECTTYPE_NAME_ITEMS[3].cd + '_' + cnt, '新_' + SELECTTYPE_NAME_ITEMS[4].cd + '_' + cnt];
-                STATE.listData.items.forEach((item) => {
-                    // 単一選択フィールドとテキスト入力フィールドを除外
-                    if (isSelectType(item.label, item.type) && select.includes(item.code)) {
-                        const allOptions = getUniqueOptions(item.code);
-                        const allValues = [...allOptions.map((opt) => opt.value), EMPTY.value];
-                        STATE.multiSelectFilters[item.code] = allValues;
-                    }
-                });
-                // stickyヘッダー対応
-                nextTick(() => {
-                    bizupUtil.common.setStickyHeaderHeight(CONTAINER_ID, 'bz_header_buttons');
-
-                    // 列固定
-                    dispColitem();
-                });
+                //const end = performance.now();
+                //console.log(`Execution time (新規パターン追加): ${end - start} ms`);
             };
 
             /**
@@ -759,7 +805,7 @@
                     if (!records || records.length === 0) {
                         Swal.fire({
                             title: '取得データーなし',
-                            text: 'パターンデータがありません',
+                            text: 'パターンデータがありません。',
                             //width: '60%',
                             confirmButtonText: '閉じる',
                         });
@@ -870,6 +916,7 @@
                         // ソート機能の実装
 
                         const sortPatternTable = (field, isAsc) => {
+                            const isInitialRender = currentSortField === null;
                             // isAscが指定されていない場合、前回のソート状態によって切り替える
                             if (isAsc === undefined) {
                                 if (currentSortField === field && currentSortAsc) {
@@ -967,8 +1014,8 @@
                                             cb.checked = true;
                                             row.style.backgroundColor = HIGHTLIGHT_COLOR;
                                         }
-                                        // チェックボックスのchecked属性設定（再表示時は自動ONを抑止）
-                                        const shouldAutoCheckRegistered = !selectedPatterns || selectedPatterns.length === 0;
+                                        // チェックボックスのchecked属性設定（初期表示時のみ自動ON）
+                                        const shouldAutoCheckRegistered = isInitialRender && (!selectedPatterns || selectedPatterns.length === 0);
                                         if (shouldAutoCheckRegistered) {
                                             const registeredPatternIds = STATE.patternNames.names.map((item) => item.id);
                                             const wkId = rec['$id']?.value ?? '';
@@ -1005,8 +1052,8 @@
                                     .querySelectorAll('input[name="patternSelect"]')
                                     .forEach((cb) => {
                                         const patternId = cb.getAttribute('data-pattern-id');
-                                        // 再表示時（selectedPatternsあり）は、表示中パターンの自動ONをしない
-                                        const shouldAutoCheckRegistered = !selectedPatterns || selectedPatterns.length === 0;
+                                        // 初期表示時のみ、登録済みパターンを自動ON
+                                        const shouldAutoCheckRegistered = isInitialRender && (!selectedPatterns || selectedPatterns.length === 0);
                                         if (shouldAutoCheckRegistered && wkData.includes(patternId)) cb.checked = true;
                                         if (cb.checked) {
                                             // チェック済みのみ
@@ -1069,7 +1116,7 @@
                     preConfirm: () => {
                         // 開くボタン押下時
                         if (STATE.listDataPattern.length <= 0) {
-                            Swal.showValidationMessage('パターンを選択してください');
+                            Swal.showValidationMessage('パターンを選択してください。');
                             return false;
                         }
                         if (STATE.listDataPattern.length > 3) {
@@ -1084,7 +1131,7 @@
                     preDeny: () => {
                         // 非表示にするボタン押下時
                         if (STATE.listDataPattern.length <= 0) {
-                            Swal.showValidationMessage('パターンを選択してください');
+                            Swal.showValidationMessage('パターンを選択してください。');
                             return false;
                         }
                     },
@@ -1179,8 +1226,9 @@
                 }
 
                 // OK処理
-                // 3つより多い場合はエラー
-                if (STATE.patternNames.len > MAX_PATTERN) {
+                // 3つより多い場合はエラー（不要では？）
+                // ※1079行目で同じ条件チェックを行っているため、ここには到達しない
+                /*if (STATE.patternNames.len > MAX_PATTERN) {
                     Swal.fire({
                         title: 'パターンの最大数超過',
                         text: '追加できるパターンは最大' + MAX_PATTERN + 'つまでです。',
@@ -1188,7 +1236,10 @@
                         confirmButtonText: '閉じる',
                     });
                     return;
-                }
+                }*/
+
+                // 時間計測
+                //const start = performance.now();
 
                 // 選択されたパターンと既存のパターンの相違をチェックする関数
                 const isDifferent = () => {
@@ -1389,8 +1440,8 @@
                                 [PATTERN_NAME_ITEMS[8].cd]: matched['OLD'][PATTERN_NAME_ITEMS[8].cd],
                                 [PATTERN_NAME_ITEMS[9].cd]: matched['OLD'][PATTERN_NAME_ITEMS[9].cd],
                                 [PATTERN_NAME_ITEMS[10].cd]: matched['OLD'][PATTERN_NAME_ITEMS[10].cd],
-                                [SELECTTYPE_NAME_ITEMS[0].cd]: matched['OLD'][PATTERN_NAME_ITEMS[1].cd] ? '[' + matched['OLD'][PATTERN_NAME_ITEMS[1].cd] + ']' + matched['OLD'][PATTERN_NAME_ITEMS[2].cd] : '',
-                                [SELECTTYPE_NAME_ITEMS[1].cd]: matched['OLD'][PATTERN_NAME_ITEMS[3].cd] ? '[' + matched['OLD'][PATTERN_NAME_ITEMS[3].cd] + ']' + matched['OLD'][PATTERN_NAME_ITEMS[4].cd] : '',
+                                [SELECTTYPE_NAME_ITEMS[0].cd]: matched['OLD'][PATTERN_NAME_ITEMS[2].cd] ? (matched['OLD'][PATTERN_NAME_ITEMS[1].cd] ? '[' + matched['OLD'][PATTERN_NAME_ITEMS[1].cd] + ']' : '') + matched['OLD'][PATTERN_NAME_ITEMS[2].cd] : '',
+                                [SELECTTYPE_NAME_ITEMS[1].cd]: matched['OLD'][PATTERN_NAME_ITEMS[4].cd] ? (matched['OLD'][PATTERN_NAME_ITEMS[3].cd] ? '[' + matched['OLD'][PATTERN_NAME_ITEMS[3].cd] + ']' : '') + matched['OLD'][PATTERN_NAME_ITEMS[4].cd] : '',
                                 [SELECTTYPE_NAME_ITEMS[3].cd]: matched['OLD'][PATTERN_NAME_ITEMS[8].cd] ? matched['OLD'][PATTERN_NAME_ITEMS[8].cd] : '',
                                 [SELECTTYPE_NAME_ITEMS[4].cd]: matched['OLD'][PATTERN_NAME_ITEMS[10].cd] ? matched['OLD'][PATTERN_NAME_ITEMS[10].cd] : '',
                             };
@@ -1457,6 +1508,9 @@
                     // 列固定
                     dispColitem();
                 });
+
+                //const end = performance.now();
+                //console.log(`Execution time (パタン開く実行): ${end - start} ms`);
             };
 
             /**
@@ -1464,6 +1518,9 @@
              * @param {object} item パターンデータ
              */
             const showBackupPattern = async (item) => {
+                // 時間計測
+                //const start = performance.now();
+
                 const no = item.index - 1; // パターン番号
 
                 // バックアップデータがない場合は何もしない
@@ -1523,6 +1580,9 @@
                     // 列固定
                     dispColitem();
                 });
+
+                //const end = performance.now();
+                //console.log(`Execution time (バックアップ表示): ${end - start} ms`);
             };
 
             /**
@@ -1809,7 +1869,7 @@
                         toast: true,
                         position: 'top',
                         icon: 'success',
-                        title: 'バックアップを復元しました',
+                        title: 'バックアップを復元しました。',
                         timer: 3000,
                         timerProgressBar: true,
                         showConfirmButton: false,
@@ -1822,12 +1882,16 @@
              * @param {object} item パターンデータ
              */
             const applyCustomerChartPattern = async (item) => {
+                // 時間計測
+                //const start = performance.now();
+
                 // メッセージを表示
                 Swal.fire({
                     title: '顧客カルテに適用中...',
                     allowOutsideClick: false, // ポップアップの外をクリックしても、画面を閉じない
                     didOpen: async () => {
                         Swal.showLoading();
+                        await new Promise((resolve) => setTimeout(resolve, 100));
                         await applyPatternToChart();
                     },
                 });
@@ -2031,12 +2095,15 @@
                         toast: true,
                         position: 'top',
                         icon: 'success',
-                        title: '顧客カルテに適用しました',
+                        title: '顧客カルテに適用しました。',
                         timer: 3000,
                         timerProgressBar: true,
                         showConfirmButton: false,
                     });
                 };
+
+                //const end = performance.now();
+                //console.log(`Execution time (顧客カルテに適用): ${end - start} ms`);
             };
 
             /**
@@ -2047,6 +2114,9 @@
              * @param {number} mode 0:パターン保存　1:顧客カルテに適用時のパターン更新　2:バックアップ復元時のパターン更新
              */
             const savePattern = async (item, updatedAt, executor, mode) => {
+                // 時間計測
+                //const start = performance.now();
+
                 // パターン保存
                 const executePatternSave = async () => {
                     const staff = [PATTERN_NAME_ITEMS[1].cd, PATTERN_NAME_ITEMS[2].cd];
@@ -2208,6 +2278,9 @@
                     const result = await executePatternSave();
                     return result;
                 }
+
+                //const end = performance.now();
+                //console.log(`Execution time (この設定を保存): ${end - start} ms`);
             };
 
             /**
@@ -2345,11 +2418,11 @@
                 const selectedbefore = Swal.getPopup().querySelector('#staffSelect').value;
                 const selectedafter = Swal.getPopup().querySelector('#afterStaffSelect').value;
                 if (!selectedbefore || String(selectedbefore).trim() === '') {
-                    Swal.showValidationMessage('変更元のスタッフを選択してください');
+                    Swal.showValidationMessage('変更元のスタッフを選択してください。');
                     return false;
                 }
                 if (!selectedafter || String(selectedafter).trim() === '') {
-                    Swal.showValidationMessage('変更後のスタッフを選択してください');
+                    Swal.showValidationMessage('変更後のスタッフを選択してください。');
                     return false;
                 }
 
@@ -2357,19 +2430,24 @@
                 const staffChecked = Swal.getPopup().querySelector('#staff').checked;
                 const subStaffChecked = Swal.getPopup().querySelector('#subStaff').checked;
                 if ((!staffChecked || String(staffChecked).trim() === '') && (!subStaffChecked || String(subStaffChecked).trim() === '')) {
-                    Swal.showValidationMessage('担当者区分を選択してください');
+                    Swal.showValidationMessage('担当者区分を選択してください。');
                     return false;
                 }
 
                 // 必要なデータを呼び出し元に渡す
                 let selectedStaff = Swal.getPopup().querySelector('#staffSelect').value; // 変更前担当者
+                const staffSelectElem = Swal.getPopup().querySelector('#staffSelect');
+                let selectedStaff2 = staffSelectElem.options[staffSelectElem.selectedIndex].text; // 変更前担当者
                 const afterStaffSelect = Swal.getPopup().querySelector('#afterStaffSelect').value; // 変更後担当者
+                const staffSelectElem2 = Swal.getPopup().querySelector('#afterStaffSelect');
+                let afterStaffSelect2 = staffSelectElem2.options[staffSelectElem2.selectedIndex].text; // 変更後担当者
+
                 const radio = Swal.getPopup().querySelector('input[name="staffRadio"]:checked').value; // 顧客カルテ　パターン　から選択
                 const staffCheck = Swal.getPopup().querySelector('#staff').checked; // 担当者
                 const subStaffCheck = Swal.getPopup().querySelector('#subStaff').checked; // 副担当者
 
                 // 変更前と変更後の担当者が同じ場合はエラー
-                if (selectedStaff === afterStaffSelect) {
+                if (selectedStaff2 === afterStaffSelect2) {
                     Swal.showValidationMessage('変更前と変更後の担当者が同じです。');
                     return false;
                 }
@@ -2377,6 +2455,7 @@
                 // 検索データ作成
                 const items = initializeBulkReplaceFields({ staffCheck: staffCheck, subStaffCheck: subStaffCheck, radio: radio, index: index });
                 selectedStaff = selectedStaff === EMPTY.value ? '' : selectedStaff;
+                //const afterStaffCodeValue = afterStaffSelect === EMPTY.value ? '' : afterStaffSelect;
 
                 // 置換元のデータがない場合、エラー
                 let msgFlag = [false, false]; // [担当者,副担当者]
@@ -2384,12 +2463,14 @@
                 let datas = null;
                 if (staffCheck) {
                     if (radio === 'pattern') {
-                        datas = STATE.listData.datas.map((p) => p.datas['pattern'][index - 1][items.searchStaff[0]]);
+                        //datas = STATE.listData.datas.map((p) => p.datas['pattern'][index - 1][items.searchStaff[0]]);
+                        datas = STATE.listData.datas.map((p) => p.datas['pattern'][index - 1][items.searchStaff[2]]);
                     } else {
-                        datas = STATE.listData.datas.map((p) => p.datas[items.searchStaff[0]]);
+                        //datas = STATE.listData.datas.map((p) => p.datas[items.searchStaff[0]]);
+                        datas = STATE.listData.datas.map((p) => p.datas[items.searchStaff[2]]);
                     }
 
-                    const rc = datas.includes(selectedStaff);
+                    const rc = datas.includes(selectedStaff2);
                     if (!rc) {
                         msgFlag[0] = true;
                         msg = '変更前担当者';
@@ -2397,11 +2478,11 @@
                 }
                 if (subStaffCheck) {
                     if (radio === 'pattern') {
-                        datas = STATE.listData.datas.map((p) => p.datas['pattern'][index - 1][items.searchStaff[1]]);
+                        datas = STATE.listData.datas.map((p) => p.datas['pattern'][index - 1][items.searchStaff[3]]);
                     } else {
-                        datas = STATE.listData.datas.map((p) => p.datas[items.searchStaff[1]]);
+                        datas = STATE.listData.datas.map((p) => p.datas[items.searchStaff[3]]);
                     }
-                    const rc = datas.includes(selectedStaff);
+                    const rc = datas.includes(selectedStaff2);
                     if (!rc) {
                         msgFlag[1] = true;
                         msg = msg === '' ? '変更前副担当者' : msg + '、変更前副担当者';
@@ -2462,10 +2543,13 @@
                     // 検索値の設定
                     if (result.radio === 'current') {
                         searchStaff[0] = staff[0];
+                        searchStaff[2] = staff[4];
                     } else if (result.radio === 'pattern') {
                         searchStaff[0] = patternStaff[0];
+                        searchStaff[2] = patternStaff[4];
                     } else {
                         searchStaff[0] = '';
+                        searchStaff[2] = '';
                     }
                 }
 
@@ -2489,10 +2573,13 @@
                     // 検索値の設定
                     if (result.radio === 'current') {
                         searchStaff[1] = subStaff[0];
+                        searchStaff[3] = subStaff[4];
                     } else if (result.radio === 'pattern') {
                         searchStaff[1] = patternSubStaff[0];
+                        searchStaff[3] = patternSubStaff[4];
                     } else {
                         searchStaff[1] = '';
+                        searchStaff[3] = '';
                     }
                 }
 
@@ -2687,6 +2774,9 @@
                     //width: '80%',
                 });
 
+                // 時間計測
+                //const start = performance.now();
+
                 //console.log('result:', result);
                 if (result.isDismissed) {
                     // キャンセルの場合でも現在の設定を保存
@@ -2768,6 +2858,8 @@
                 });
 
                 console.log('一括置換が完了しました');
+                //const end = performance.now();
+                //console.log(`Execution time (担当者一括置換実行): ${end - start} ms`);
             };
 
             /**
@@ -2833,7 +2925,6 @@
                 <div style="margin-top: 16px; display: flex; gap: 8px; justify-content: flex-end;">
                     <button id="selectAllBtn" type="button" class="bz_bt_def">全チェック</button>
                     <button id="deselectAllBtn" type="button" class="bz_bt_def">全チェック解除</button>
-                    <button id="closeBtn" type="button" class="bz_bt_def bz_bt_cancel">閉じる</button>
                 </div>`;
 
                 const result = await Swal.fire({
@@ -2841,12 +2932,12 @@
                     //title: '列表示設定',
                     html: itemsHtml,
                     width: '800px',
-                    showConfirmButton: false,
-                    showCancelButton: false,
+                    showConfirmButton: true,
+                    showCancelButton: true,
+                    confirmButtonText: '実行',
+                    cancelButtonText: 'キャンセル',
                     //showCloseButton: true,
                     draggable: true,
-                    //confirmButtonText: '閉じる',
-                    //cancelButtonText: 'キャンセル',
                     didOpen: () => {
                         // 全チェックボタンのイベント
                         const selectAllBtn = Swal.getPopup().querySelector('#selectAllBtn');
@@ -2855,8 +2946,6 @@
                             checkboxes.forEach((checkbox) => {
                                 checkbox.checked = true;
                             });
-                            // リアルタイムで反映
-                            updateVisibleColumns();
                         });
 
                         // 全チェック解除ボタンのイベント
@@ -2866,41 +2955,7 @@
                             checkboxes.forEach((checkbox) => {
                                 checkbox.checked = false;
                             });
-                            // リアルタイムで反映
-                            updateVisibleColumns();
                         });
-
-                        // 閉じるボタンのイベント
-                        const closeBtn = Swal.getPopup().querySelector('#closeBtn');
-                        closeBtn.addEventListener('click', () => {
-                            Swal.close();
-                        });
-
-                        // 各チェックボックスの変更イベント
-                        const checkboxes = Swal.getPopup().querySelectorAll('input[type="checkbox"]');
-                        checkboxes.forEach((checkbox) => {
-                            checkbox.addEventListener('change', () => {
-                                updateVisibleColumns();
-                            });
-                        });
-
-                        // 表示/非表示状態を更新する関数
-                        function updateVisibleColumns() {
-                            const checkboxes = Swal.getPopup().querySelectorAll('input[type="checkbox"]');
-                            if (!STATE.visibleColumns) {
-                                STATE.visibleColumns = {};
-                            }
-                            checkboxes.forEach((checkbox) => {
-                                STATE.visibleColumns[checkbox.value] = checkbox.checked;
-                            });
-
-                            nextTick(() => {
-                                // 列固定
-                                if (STATE?.patternNames?.len > 0) {
-                                    dispColitem();
-                                }
-                            });
-                        }
                     },
                     preConfirm: () => {
                         const checkboxes = Swal.getPopup().querySelectorAll('input[type="checkbox"]');
@@ -2911,6 +2966,19 @@
                         return visibleColumns;
                     },
                 });
+
+                if (result.isConfirmed) {
+                    //const start = performance.now();
+                    STATE.visibleColumns = result.value;
+                    nextTick(() => {
+                        // 列固定
+                        if (STATE?.patternNames?.len > 0) {
+                            dispColitem();
+                        }
+                    });
+                    //const end = performance.now();
+                    //console.log(`Execution time (列表示設定チェックボックスONOFF): ${end - start} ms`);
+                }
             };
 
             /**
@@ -2922,16 +2990,19 @@
                 let listTotal = null;
                 let total = null;
                 let title = '';
+                let itemName = '';
                 if (flg === 0) {
                     // 担当者集計
                     listTotal = STATE.listTotal.staff;
                     total = totalStaff.value.staff;
                     title = '担当者別集計';
+                    itemName = '担当者名';
                 } else if (flg === 1) {
                     // 所属集計
                     listTotal = STATE.listTotal.org;
                     total = totalStaff.value.org;
                     title = '所属別集計';
+                    itemName = '所属名';
                 }
 
                 // Swalに表示
@@ -2952,7 +3023,7 @@
                             </tr>
                             <tr>
                                 <!--<th style="border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2;">担当者コード</th>-->
-                                <th style="border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2; text-align: center;">担当者名</th>
+                                <th style="border: 1px solid #ddd; padding: 8px; background-color: #f2f2f2; text-align: center;">${itemName}</th>
                 `;
 
                 // 月
@@ -3489,7 +3560,9 @@
                     const isChecked = selectedIds.has(val); // データがあれば、チェック済となる
                     checkbox.checked = isChecked;
                     checkbox.addEventListener('change', handleCheckboxChange);
-                    if (isChecked) {
+
+                    // この処理は不要になった可能性が高い とりあえずは、コメントにしておく
+                    /*if (isChecked) {
                         // チェックがあった場合
                         const row = checkbox.closest('tr');
                         row.style.backgroundColor = highlightClass;
@@ -3499,7 +3572,7 @@
                         }
                     } else {
                         //console.log('val:', val, ':', checkbox.checked);
-                    }
+                    }*/
                 });
 
                 // ポップアップダイアログ画面の高さを調整
@@ -3966,6 +4039,29 @@
                                 label: '[' + item[cd] + ']' + item[nm],
                                 value: item[cd],
                             }));
+
+                        // 旧（バックアップ）の場合のみ、OLD データから値を追加
+                        if (datas[0] === '旧') {
+                            const patternNum = Number(datas[2]);
+                            const oldCd = datas[1] === SELECTTYPE_NAME_ITEMS[0].cd ? PATTERN_NAME_ITEMS[1].cd : PATTERN_NAME_ITEMS[3].cd;
+                            const oldNm = datas[1] === SELECTTYPE_NAME_ITEMS[0].cd ? PATTERN_NAME_ITEMS[2].cd : PATTERN_NAME_ITEMS[4].cd;
+                            const pairsCodes = new Set(pairs.map((p) => p.value));
+
+                            (STATE.listData.datas ?? []).forEach((item) => {
+                                const oldData = item.datas?.['pattern']?.[patternNum - 1]?.['OLD'];
+                                if (oldData) {
+                                    const staffCode = oldData[oldCd];
+                                    const staffName = oldData[oldNm];
+                                    if (staffCode && staffName && !pairsCodes.has(staffCode)) {
+                                        pairs.push({
+                                            label: '[' + staffCode + ']' + staffName,
+                                            value: staffCode,
+                                        });
+                                        pairsCodes.add(staffCode);
+                                    }
+                                }
+                            });
+                        }
                     }
                 } else if (code === SELECTTYPE_NAME_ITEMS[3].cd || code === SELECTTYPE_NAME_ITEMS[4].cd || departmentFlg.some((f) => f)) {
                     const filteredDepartments = [...STATE.selectStaffs]; // 初期表示時にデータ設定済
@@ -4704,31 +4800,41 @@
              */
             const dispColitem = async () => {
                 // stickyの幅を取得する
-                const stickyHeader = document.querySelectorAll('.items-header');
+                const stickyHeaders = document.querySelectorAll('.items-header');
 
+                let style = '';
                 let left = 0;
-                stickyHeader.forEach((item) => {
-                    item.style.left = left + 'px';
-                    item.style.position = 'sticky';
+
+                // 動的スタイルタグの取得または作成
+                let styleEl = document.getElementById('bz_sticky_style');
+                if (!styleEl) {
+                    styleEl = document.createElement('style');
+                    styleEl.id = 'bz_sticky_style';
+                    document.head.appendChild(styleEl);
+                }
+
+                stickyHeaders.forEach((item) => {
+                    // クラス名からコードを取得
+                    let code = '';
+                    const classes = item.getAttribute('class').split(' ');
+                    classes.forEach((cls) => {
+                        if (cls.startsWith('sticky-col-')) {
+                            code = cls.replace('sticky-col-', '');
+                        }
+                    });
+
+                    if (code) {
+                        // ヘッダー用
+                        style += `th.sticky-col-${code} { position: sticky; left: ${left}px; z-index: 12; }\n`;
+                        // データ行用
+                        style += `td.sticky-col-${code} { position: sticky; left: ${left}px; z-index: 11; background-color: inherit; }\n`;
+                    }
+
                     const width = item.offsetWidth;
                     left += width;
                 });
 
-                const rows = document.querySelectorAll('.items-row');
-                rows.forEach((row) => {
-                    const tds = row.querySelectorAll('.items-body');
-                    left = 0;
-                    tds.forEach((item) => {
-                        item.style.left = left + 'px';
-                        item.style.position = 'sticky';
-                        const width = item.offsetWidth;
-                        left += width;
-                    });
-                });
-
-                // CSSの変数（--left）の設定
-                //let element = document.querySelector(CONTAINER_ID);
-                //element.style.setProperty('--left', maxWidth + 'px'); // 2列目の左位置
+                styleEl.textContent = style;
             };
 
             /**
@@ -4736,6 +4842,9 @@
              */
             onMounted(async () => {
                 // 初期表示
+
+                // 時間計測
+                //const start = performance.now();
 
                 // 取得フィールド作成
                 let fields = [];
@@ -5067,7 +5176,7 @@
                     console.log('項目取得失敗！:onMounted:', e.error);
                     Swal.fire({
                         title: '項目取得失敗',
-                        text: '顧客カルテからデータを取得できませんでした',
+                        text: '顧客カルテからデータを取得できませんでした。',
                         confirmButtonText: '閉じる',
                     });
                     return;
@@ -5115,12 +5224,13 @@
                         STATE.selectStaffs = filteredStaffs;
                         // 所属
                     } else {
-                        console.log('staffsデータがありません');
+                        console.log('staffsデータがありません。');
                     }
 
                     // テスト用データ
                     /*STATE.listData.datas.push({
                         datas: {
+                            $id: '999', // テスト用ID
                             顧客コード: '999',
                             顧客コード名: '[999]顧客テスト１',
                             顧客名: '顧客テスト１',
@@ -5164,7 +5274,7 @@
                     console.log('担当者取得失敗！:onMounted:', e.error);
                     Swal.fire({
                         title: '項目取得失敗',
-                        text: '担当者マスタからデータを取得できませんでした',
+                        text: '担当者マスタからデータを取得できませんでした。',
                         confirmButtonText: '閉じる',
                     });
                     return;
@@ -5282,6 +5392,8 @@
                 });
 
                 console.log('STATE:', STATE);
+                //const end = performance.now();
+                //console.log(`Execution time (初期表示): ${end - start} ms`);
                 //totalStaff();
             });
 
@@ -5351,7 +5463,7 @@
                         <tr>
                             <template v-for="(field, index) in STATE.listData.items" :key="field">
                                 <template v-if="isSelectData(field.code)===2">
-                                    <th v-if="isVisibleItem(field.code)" :style="{backgroundColor:setTitleBackColor(field.code)}" rowspan="2" class="items-header">
+                                    <th v-if="isVisibleItem(field.code)" :style="{backgroundColor:setTitleBackColor(field.code)}" rowspan="2" class="items-header" :class="'sticky-col-' + field.code">
                                         <div>
                                             {{ setNewLabel(field.label) }}
                                             <span class="sort-btn" @click="sortData(field.code)" :class="{ active: STATE.sortOrder.field === field.code }">{{ STATE.sortOrder.field === field.code ? (STATE.sortOrder.asc ? '▲' : '▼') : '▲' }}</span>
@@ -5459,7 +5571,7 @@
                         <template v-for="(field,index) in filteredRows" :key="field">
                             <tr class="items-row">
                                 <template v-for="(key,itemIndex) in STATE.listData.items" :key="key">
-                                    <td v-if="isVisibleItem(key.code)" :style="{backgroundColor:setItemBackColor(key.code,field.datas) , color:setItemFontColor(key.code,field.datas)}" :class="isSelectData(key.code)===2?'items-body':''">
+                                    <td v-if="isVisibleItem(key.code)" :style="{backgroundColor:setItemBackColor(key.code,field.datas) , color:setItemFontColor(key.code,field.datas)}" :class="isSelectData(key.code)===2?'items-body sticky-col-' + key.code:''">
                                         <!--{{setItemBackColor(key.code,field.datas)}}-->
                                         <template v-if="isSelectData(key.code)===0"
                                             ><!--{{STATE.patternNames.noNow}}:-->
@@ -5472,7 +5584,7 @@
                                         <template v-else>
                                             <template v-if="key.code==='顧客コード名'">
                                                 <span :title="'顧客コード名'">
-                                                    <a class="no-color-change underline cursor-pointer" :href="generateHref(field.datas.$id,'85')" target="_blank"> {{field.datas[key.code]}} </a>
+                                                    <a class="no-color-change underline cursor-pointer" :href="generateHref(field.datas.$id,STATE.customerAppID)" target="_blank"> {{field.datas[key.code]}} </a>
                                                 </span>
                                             </template>
                                             <template v-else>{{getStaffData(key.code,field.datas)}} </template>
