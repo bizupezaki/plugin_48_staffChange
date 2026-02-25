@@ -1362,18 +1362,29 @@
                     }
 
                     // 現役の担当者取得
-                    const staffsCode = STATE.selectStaffs.map((s) => s[STAFFMASTER_FIELD.staffCode.cd]);
+                    const staffsCodeMap = new Map();
+                    STATE.selectStaffs.forEach((s, idx) => {
+                        staffsCodeMap.set(s[STAFFMASTER_FIELD.staffCode.cd], idx);
+                    });
+
+                    // JSONデータをMapに変換してIDによる検索をO(1)に高速化
+                    const clickDataMap = new Map();
+                    clickData.forEach((data) => {
+                        clickDataMap.set(data['$id'], data);
+                    });
 
                     // STATE.listData.datasに追加
                     const updatedArray = STATE.listData.datas.reduce((acc, item) => {
-                        // JSONデータから該当IDのデータを取得
-                        const matched = clickData.find((data) => data['$id'] === item.datas['$id']);
+                        // JSONデータから該当IDのデータを取得 (Mapを使用して高速化)
+                        const matched = clickDataMap.get(item.datas['$id']);
                         // 担当者コードと所属名は対になっているはずなので、担当者コードで現役かどうかをチェック
                         let idxS1 = -1;
                         let idxS2 = -1;
                         if (matched) {
-                            idxS1 = staffsCode.indexOf(matched[PATTERN_NAME_ITEMS[1].cd]); // 担当者コード
-                            idxS2 = staffsCode.indexOf(matched[PATTERN_NAME_ITEMS[3].cd]); // 副担当者コード
+                            const p1Code = matched[PATTERN_NAME_ITEMS[1].cd];
+                            const p3Code = matched[PATTERN_NAME_ITEMS[3].cd];
+                            idxS1 = staffsCodeMap.has(p1Code) ? staffsCodeMap.get(p1Code) : -1; // 担当者コード
+                            idxS2 = staffsCodeMap.has(p3Code) ? staffsCodeMap.get(p3Code) : -1; // 副担当者コード
                         }
 
                         // 担当者・副担当者の完全一致チェック
@@ -1703,6 +1714,10 @@
 
                     // 更新データ作成
                     const updateList = STATE.listData.datas.filter((data) => data.datas[staffCode[0]] !== data.datas['pattern'][no].OLD[staffCode[0]] || data.datas[subStaffCode[0]] !== data.datas['pattern'][no].OLD[subStaffCode[0]]);
+
+                    // 担当者の存在チェックを高速化するためにSetを利用
+                    const validStaffSet = new Set(STATE.selectStaffs.map((s) => s[STAFFMASTER_FIELD.staff.cd]));
+
                     // バックアップ用にデータを退避
                     // 更新対象から担当者・副担当者関連のデータを抽出
                     const updateData = updateList.map((data) => {
@@ -1710,9 +1725,9 @@
                         const backupStaffName = data.datas['pattern'][no].OLD[staffCode[1]];
                         const backupSubStaffName = data.datas['pattern'][no].OLD[subStaffCode[1]];
 
-                        // 担当者マスタから担当者名を検索
-                        const staffExists = STATE.selectStaffs.some((staff) => staff[STAFFMASTER_FIELD.staff.cd] === backupStaffName);
-                        const subStaffExists = STATE.selectStaffs.some((staff) => staff[STAFFMASTER_FIELD.staff.cd] === backupSubStaffName);
+                        // Setを使ってO(1)で検索
+                        const staffExists = validStaffSet.has(backupStaffName);
+                        const subStaffExists = validStaffSet.has(backupSubStaffName);
 
                         // 存在しなければ空にする
                         const staffValue = staffExists ? backupStaffName : '';
@@ -1803,62 +1818,68 @@
                     }
 
                     // 表示データを更新
-                    const updatedArrays = ref.records.reduce((acc, r) => {
-                        return acc.map((data) => {
-                            if (data.datas[EXCEPT_ITEMS[0]] === r.id) {
-                                // バックアップ復元時の担当者と所属が存在するかチェック
-                                const backupStaffName = data.datas['pattern'][no]['OLD'][staffCode[1]];
-                                const backupSubStaffName = data.datas['pattern'][no]['OLD'][subStaffCode[1]];
-
-                                const staffExists = STATE.selectStaffs.some((staff) => staff[STAFFMASTER_FIELD.staff.cd] === backupStaffName);
-                                const subStaffExists = STATE.selectStaffs.some((staff) => staff[STAFFMASTER_FIELD.staff.cd] === backupSubStaffName);
-
-                                // 存在しなければ空にする
-                                const staffValue = staffExists ? data.datas['pattern'][no]['OLD'][staffCode[1]] : '';
-                                const staffCodeValue = staffExists ? data.datas['pattern'][no]['OLD'][staffCode[0]] : '';
-                                const staffNameValue = staffExists ? data.datas['pattern'][no]['OLD'][staffCode[2]] : '';
-
-                                const subStaffValue = subStaffExists ? data.datas['pattern'][no]['OLD'][subStaffCode[1]] : '';
-                                const subStaffCodeValue = subStaffExists ? data.datas['pattern'][no]['OLD'][subStaffCode[0]] : '';
-                                const subStaffNameValue = subStaffExists ? data.datas['pattern'][no]['OLD'][subStaffCode[2]] : '';
-
-                                // 担当者が空の場合のみ所属も空に設定
-                                const departmentCodeValue = staffValue ? data.datas['pattern'][no]['OLD'][departmentCode[0]] : '';
-                                const departmentNameValue = staffValue ? data.datas['pattern'][no]['OLD'][departmentCode[1]] : '';
-                                const departmentLabelValue = staffValue ? data.datas['pattern'][no]['OLD'][departmentCode[2]] : '';
-
-                                // 副担当者が空の場合のみ副所属も空に設定
-                                const subDepartmentCodeValue = subStaffValue ? data.datas['pattern'][no]['OLD'][subDepartmentCode[0]] : '';
-                                const subDepartmentNameValue = subStaffValue ? data.datas['pattern'][no]['OLD'][subDepartmentCode[1]] : '';
-                                const subDepartmentLabelValue = subStaffValue ? data.datas['pattern'][no]['OLD'][subDepartmentCode[2]] : '';
-
-                                return {
-                                    ...data,
-                                    datas: {
-                                        ...data.datas,
-                                        [EXCEPT_ITEMS[1]]: r.revision,
-                                        [PATTERN_NAME_ITEMS[1].cd]: staffCodeValue, // 担当者コード
-                                        [PATTERN_NAME_ITEMS[2].cd]: staffValue, // 担当者
-                                        [SELECTTYPE_NAME_ITEMS[0].cd]: staffNameValue, // 担当者コード名
-
-                                        [PATTERN_NAME_ITEMS[7].cd]: departmentCodeValue, // 担当者所属コード
-                                        [PATTERN_NAME_ITEMS[8].cd]: departmentNameValue, // 担当者所属
-                                        [SELECTTYPE_NAME_ITEMS[3].cd]: departmentLabelValue, // 担当者所属コード名
-
-                                        [PATTERN_NAME_ITEMS[3].cd]: subStaffCodeValue, // 副担当者コード
-                                        [PATTERN_NAME_ITEMS[4].cd]: subStaffValue, // 副担当者
-                                        [SELECTTYPE_NAME_ITEMS[1].cd]: subStaffNameValue, // 副担当者コード名
-
-                                        [PATTERN_NAME_ITEMS[9].cd]: subDepartmentCodeValue, // 副担当者所属コード
-                                        [PATTERN_NAME_ITEMS[10].cd]: subDepartmentNameValue, // 副担当者所属
-                                        [SELECTTYPE_NAME_ITEMS[4].cd]: subDepartmentLabelValue, // 副担当者所属コード名
-                                    },
-                                };
-                            } else {
-                                return data;
-                            }
+                    const refMap = new Map();
+                    if (ref && ref.records) {
+                        ref.records.forEach((r) => {
+                            refMap.set(String(r.id), r.revision);
                         });
-                    }, STATE.listData.datas);
+                    }
+
+                    const updatedArrays = STATE.listData.datas.map((data) => {
+                        const recId = String(data.datas[EXCEPT_ITEMS[0]]);
+                        if (refMap.has(recId)) {
+                            // バックアップ復元時の担当者と所属が存在するかチェック
+                            const backupStaffName = data.datas['pattern'][no]['OLD'][staffCode[1]];
+                            const backupSubStaffName = data.datas['pattern'][no]['OLD'][subStaffCode[1]];
+
+                            const staffExists = validStaffSet.has(backupStaffName);
+                            const subStaffExists = validStaffSet.has(backupSubStaffName);
+
+                            // 存在しなければ空にする
+                            const staffValue = staffExists ? data.datas['pattern'][no]['OLD'][staffCode[1]] : '';
+                            const staffCodeValue = staffExists ? data.datas['pattern'][no]['OLD'][staffCode[0]] : '';
+                            const staffNameValue = staffExists ? data.datas['pattern'][no]['OLD'][staffCode[2]] : '';
+
+                            const subStaffValue = subStaffExists ? data.datas['pattern'][no]['OLD'][subStaffCode[1]] : '';
+                            const subStaffCodeValue = subStaffExists ? data.datas['pattern'][no]['OLD'][subStaffCode[0]] : '';
+                            const subStaffNameValue = subStaffExists ? data.datas['pattern'][no]['OLD'][subStaffCode[2]] : '';
+
+                            // 担当者が空の場合のみ所属も空に設定
+                            const departmentCodeValue = staffValue ? data.datas['pattern'][no]['OLD'][departmentCode[0]] : '';
+                            const departmentNameValue = staffValue ? data.datas['pattern'][no]['OLD'][departmentCode[1]] : '';
+                            const departmentLabelValue = staffValue ? data.datas['pattern'][no]['OLD'][departmentCode[2]] : '';
+
+                            // 副担当者が空の場合のみ副所属も空に設定
+                            const subDepartmentCodeValue = subStaffValue ? data.datas['pattern'][no]['OLD'][subDepartmentCode[0]] : '';
+                            const subDepartmentNameValue = subStaffValue ? data.datas['pattern'][no]['OLD'][subDepartmentCode[1]] : '';
+                            const subDepartmentLabelValue = subStaffValue ? data.datas['pattern'][no]['OLD'][subDepartmentCode[2]] : '';
+
+                            return {
+                                ...data,
+                                datas: {
+                                    ...data.datas,
+                                    [EXCEPT_ITEMS[1]]: refMap.get(recId),
+                                    [PATTERN_NAME_ITEMS[1].cd]: staffCodeValue, // 担当者コード
+                                    [PATTERN_NAME_ITEMS[2].cd]: staffValue, // 担当者
+                                    [SELECTTYPE_NAME_ITEMS[0].cd]: staffNameValue, // 担当者コード名
+
+                                    [PATTERN_NAME_ITEMS[7].cd]: departmentCodeValue, // 担当者所属コード
+                                    [PATTERN_NAME_ITEMS[8].cd]: departmentNameValue, // 担当者所属
+                                    [SELECTTYPE_NAME_ITEMS[3].cd]: departmentLabelValue, // 担当者所属コード名
+
+                                    [PATTERN_NAME_ITEMS[3].cd]: subStaffCodeValue, // 副担当者コード
+                                    [PATTERN_NAME_ITEMS[4].cd]: subStaffValue, // 副担当者
+                                    [SELECTTYPE_NAME_ITEMS[1].cd]: subStaffNameValue, // 副担当者コード名
+
+                                    [PATTERN_NAME_ITEMS[9].cd]: subDepartmentCodeValue, // 副担当者所属コード
+                                    [PATTERN_NAME_ITEMS[10].cd]: subDepartmentNameValue, // 副担当者所属
+                                    [SELECTTYPE_NAME_ITEMS[4].cd]: subDepartmentLabelValue, // 副担当者所属コード名
+                                },
+                            };
+                        } else {
+                            return data;
+                        }
+                    });
                     STATE.listData.datas = updatedArrays;
 
                     // 担当者ごとに集計
@@ -1930,16 +1951,12 @@
                     // 以前データをバックアップする
                     STATE.listData.datas.forEach((data) => {
                         // 担当者　副担当者
+                        if (!data.datas['pattern'][no]['OLD']) {
+                            data.datas['pattern'][no]['OLD'] = {};
+                        }
                         for (let i = 0; i < staff.length; i++) {
-                            if (data.datas['pattern'][no]['OLD']) {
-                                data.datas['pattern'][no]['OLD'][staff[i]] = data.datas[staff[i]];
-                                data.datas['pattern'][no]['OLD'][subStaff[i]] = data.datas[subStaff[i]];
-                            } else {
-                                data.datas['pattern'][no]['OLD'] = {
-                                    [staff[i]]: data.datas[staff[i]],
-                                    [subStaff[i]]: data.datas[subStaff[i]],
-                                };
-                            }
+                            data.datas['pattern'][no]['OLD'][staff[i]] = data.datas[staff[i]];
+                            data.datas['pattern'][no]['OLD'][subStaff[i]] = data.datas[subStaff[i]];
                         }
                     });
 
@@ -2046,36 +2063,42 @@
                     }
 
                     // 表示データを更新
-                    const updatedArrays = ref.records.reduce((acc, r) => {
-                        return acc.map((data) => {
-                            if (data.datas[EXCEPT_ITEMS[0]] === r.id) {
-                                return {
-                                    ...data,
-                                    datas: {
-                                        ...data.datas,
-                                        [EXCEPT_ITEMS[1]]: r.revision,
-                                        [PATTERN_NAME_ITEMS[1].cd]: data.datas['pattern'][no][staffCode[0]], // 担当者コード
-                                        [PATTERN_NAME_ITEMS[2].cd]: data.datas['pattern'][no][staffCode[1]], // 担当者
-                                        [SELECTTYPE_NAME_ITEMS[0].cd]: data.datas['pattern'][no][staffCode[2]], // 担当者コード名
-
-                                        [PATTERN_NAME_ITEMS[7].cd]: data.datas['pattern'][no][departmentCode[0]], // 担当者所属コード
-                                        [PATTERN_NAME_ITEMS[8].cd]: data.datas['pattern'][no][departmentCode[1]], // 担当者所属
-                                        [SELECTTYPE_NAME_ITEMS[3].cd]: data.datas['pattern'][no][departmentCode[2]], // 担当者所属コード名
-
-                                        [PATTERN_NAME_ITEMS[3].cd]: data.datas['pattern'][no][subStaffCode[0]], // 副担当者コード
-                                        [PATTERN_NAME_ITEMS[4].cd]: data.datas['pattern'][no][subStaffCode[1]], // 副担当者
-                                        [SELECTTYPE_NAME_ITEMS[1].cd]: data.datas['pattern'][no][subStaffCode[2]], // 副担当者コード名
-
-                                        [PATTERN_NAME_ITEMS[9].cd]: data.datas['pattern'][no][subDepartmentCode[0]], // 副担当者所属コード
-                                        [PATTERN_NAME_ITEMS[10].cd]: data.datas['pattern'][no][subDepartmentCode[1]], // 副担当者所属
-                                        [SELECTTYPE_NAME_ITEMS[4].cd]: data.datas['pattern'][no][subDepartmentCode[2]], // 副担当者所属コード名
-                                    },
-                                };
-                            } else {
-                                return data;
-                            }
+                    const refMap = new Map();
+                    if (ref && ref.records) {
+                        ref.records.forEach((r) => {
+                            refMap.set(String(r.id), r.revision);
                         });
-                    }, STATE.listData.datas);
+                    }
+
+                    const updatedArrays = STATE.listData.datas.map((data) => {
+                        const recId = String(data.datas[EXCEPT_ITEMS[0]]);
+                        if (refMap.has(recId)) {
+                            return {
+                                ...data,
+                                datas: {
+                                    ...data.datas,
+                                    [EXCEPT_ITEMS[1]]: refMap.get(recId),
+                                    [PATTERN_NAME_ITEMS[1].cd]: data.datas['pattern'][no][staffCode[0]], // 担当者コード
+                                    [PATTERN_NAME_ITEMS[2].cd]: data.datas['pattern'][no][staffCode[1]], // 担当者
+                                    [SELECTTYPE_NAME_ITEMS[0].cd]: data.datas['pattern'][no][staffCode[2]], // 担当者コード名
+
+                                    [PATTERN_NAME_ITEMS[7].cd]: data.datas['pattern'][no][departmentCode[0]], // 担当者所属コード
+                                    [PATTERN_NAME_ITEMS[8].cd]: data.datas['pattern'][no][departmentCode[1]], // 担当者所属
+                                    [SELECTTYPE_NAME_ITEMS[3].cd]: data.datas['pattern'][no][departmentCode[2]], // 担当者所属コード名
+
+                                    [PATTERN_NAME_ITEMS[3].cd]: data.datas['pattern'][no][subStaffCode[0]], // 副担当者コード
+                                    [PATTERN_NAME_ITEMS[4].cd]: data.datas['pattern'][no][subStaffCode[1]], // 副担当者
+                                    [SELECTTYPE_NAME_ITEMS[1].cd]: data.datas['pattern'][no][subStaffCode[2]], // 副担当者コード名
+
+                                    [PATTERN_NAME_ITEMS[9].cd]: data.datas['pattern'][no][subDepartmentCode[0]], // 副担当者所属コード
+                                    [PATTERN_NAME_ITEMS[10].cd]: data.datas['pattern'][no][subDepartmentCode[1]], // 副担当者所属
+                                    [SELECTTYPE_NAME_ITEMS[4].cd]: data.datas['pattern'][no][subDepartmentCode[2]], // 副担当者所属コード名
+                                },
+                            };
+                        } else {
+                            return data;
+                        }
+                    });
                     STATE.listData.datas = updatedArrays;
 
                     // 整合性チェック
@@ -2150,15 +2173,16 @@
                         }
                         if (data.datas['pattern'][no]['OLD']) {
                             //if (mode !== 2) {
-                            result.OLD[PATTERN_NAME_ITEMS[1].cd] = utils.common.containsKey(data.datas['pattern'][no]['OLD'], PATTERN_NAME_ITEMS[1].cd) ? data.datas['pattern'][no]['OLD'][PATTERN_NAME_ITEMS[1].cd] : null; // 担当者コード
-                            result.OLD[PATTERN_NAME_ITEMS[2].cd] = utils.common.containsKey(data.datas['pattern'][no]['OLD'], PATTERN_NAME_ITEMS[2].cd) ? data.datas['pattern'][no]['OLD'][PATTERN_NAME_ITEMS[2].cd] : null; // 担当者名
-                            result.OLD[PATTERN_NAME_ITEMS[3].cd] = utils.common.containsKey(data.datas['pattern'][no]['OLD'], PATTERN_NAME_ITEMS[3].cd) ? data.datas['pattern'][no]['OLD'][PATTERN_NAME_ITEMS[3].cd] : null; // 担当者所属コード
-                            result.OLD[PATTERN_NAME_ITEMS[4].cd] = utils.common.containsKey(data.datas['pattern'][no]['OLD'], PATTERN_NAME_ITEMS[4].cd) ? data.datas['pattern'][no]['OLD'][PATTERN_NAME_ITEMS[4].cd] : null; // 担当者所属名
+                            const oldData = data.datas['pattern'][no]['OLD'];
+                            result.OLD[PATTERN_NAME_ITEMS[1].cd] = PATTERN_NAME_ITEMS[1].cd in oldData ? oldData[PATTERN_NAME_ITEMS[1].cd] : null; // 担当者コード
+                            result.OLD[PATTERN_NAME_ITEMS[2].cd] = PATTERN_NAME_ITEMS[2].cd in oldData ? oldData[PATTERN_NAME_ITEMS[2].cd] : null; // 担当者名
+                            result.OLD[PATTERN_NAME_ITEMS[3].cd] = PATTERN_NAME_ITEMS[3].cd in oldData ? oldData[PATTERN_NAME_ITEMS[3].cd] : null; // 担当者所属コード
+                            result.OLD[PATTERN_NAME_ITEMS[4].cd] = PATTERN_NAME_ITEMS[4].cd in oldData ? oldData[PATTERN_NAME_ITEMS[4].cd] : null; // 担当者所属名
 
-                            result.OLD[PATTERN_NAME_ITEMS[7].cd] = utils.common.containsKey(data.datas['pattern'][no]['OLD'], PATTERN_NAME_ITEMS[7].cd) ? data.datas['pattern'][no]['OLD'][PATTERN_NAME_ITEMS[7].cd] : null; // 副担当者コード
-                            result.OLD[PATTERN_NAME_ITEMS[8].cd] = utils.common.containsKey(data.datas['pattern'][no]['OLD'], PATTERN_NAME_ITEMS[8].cd) ? data.datas['pattern'][no]['OLD'][PATTERN_NAME_ITEMS[8].cd] : null; // 副担当者名
-                            result.OLD[PATTERN_NAME_ITEMS[9].cd] = utils.common.containsKey(data.datas['pattern'][no]['OLD'], PATTERN_NAME_ITEMS[9].cd) ? data.datas['pattern'][no]['OLD'][PATTERN_NAME_ITEMS[9].cd] : null; // 副担当者所属コード
-                            result.OLD[PATTERN_NAME_ITEMS[10].cd] = utils.common.containsKey(data.datas['pattern'][no]['OLD'], PATTERN_NAME_ITEMS[10].cd) ? data.datas['pattern'][no]['OLD'][PATTERN_NAME_ITEMS[10].cd] : null; // 副担当者所属名
+                            result.OLD[PATTERN_NAME_ITEMS[7].cd] = PATTERN_NAME_ITEMS[7].cd in oldData ? oldData[PATTERN_NAME_ITEMS[7].cd] : null; // 副担当者コード
+                            result.OLD[PATTERN_NAME_ITEMS[8].cd] = PATTERN_NAME_ITEMS[8].cd in oldData ? oldData[PATTERN_NAME_ITEMS[8].cd] : null; // 副担当者名
+                            result.OLD[PATTERN_NAME_ITEMS[9].cd] = PATTERN_NAME_ITEMS[9].cd in oldData ? oldData[PATTERN_NAME_ITEMS[9].cd] : null; // 副担当者所属コード
+                            result.OLD[PATTERN_NAME_ITEMS[10].cd] = PATTERN_NAME_ITEMS[10].cd in oldData ? oldData[PATTERN_NAME_ITEMS[10].cd] : null; // 副担当者所属名
                         } else {
                             result.OLD[PATTERN_NAME_ITEMS[1].cd] = null; // 担当者コード
                             result.OLD[PATTERN_NAME_ITEMS[2].cd] = null;
@@ -2446,6 +2470,10 @@
                 const staffCheck = Swal.getPopup().querySelector('#staff').checked; // 担当者
                 const subStaffCheck = Swal.getPopup().querySelector('#subStaff').checked; // 副担当者
 
+                // [退社][非表示]を省く
+                selectedStaff2 = selectedStaff2.replace(/(\[退社\]|\[非表示\])/g, '').trim();
+                //afterStaffSelect2 = afterStaffSelect2.replace(/(\[退社\]|\[非表示\])/g, '').trim(); // 置換後には基本ないので、不要
+
                 // 変更前と変更後の担当者が同じ場合はエラー
                 if (selectedStaff2 === afterStaffSelect2) {
                     Swal.showValidationMessage('変更前と変更後の担当者が同じです。');
@@ -2470,7 +2498,7 @@
                         datas = STATE.listData.datas.map((p) => p.datas[items.searchStaff[2]]);
                     }
 
-                    const rc = datas.includes(selectedStaff2);
+                    const rc = datas.map((d) => (d ? d.replace(/ \((非表示|退社)\)$/, '').trim() : '')).includes(selectedStaff2);
                     if (!rc) {
                         msgFlag[0] = true;
                         msg = '変更前担当者';
@@ -2482,7 +2510,7 @@
                     } else {
                         datas = STATE.listData.datas.map((p) => p.datas[items.searchStaff[3]]);
                     }
-                    const rc = datas.includes(selectedStaff2);
+                    const rc = datas.map((d) => (d ? d.replace(/ \((非表示|退社)\)$/, '').trim() : '')).includes(selectedStaff2);
                     if (!rc) {
                         msgFlag[1] = true;
                         msg = msg === '' ? '変更前副担当者' : msg + '、変更前副担当者';
@@ -2506,8 +2534,8 @@
                     afterStaff: afterStaffSelect,
                     staffs: items,
                     radio: radio,
-                    //staffCheck: staffCheck,
-                    //subStaffCheck: subStaffCheck,
+                    staffCheck: staffCheck,
+                    subStaffCheck: subStaffCheck,
                     index: index,
                 };
             };
@@ -2812,6 +2840,31 @@
                 const selectedStaffCode = result.value.staff; // 変更前担当者コード
                 const afterStaffCode = result.value.afterStaff;
 
+                // 変更後の担当者情報を事前に取得（N*M問題を解消するためループ外に出す）
+                let preSelectedStaffName = '';
+                let preSelectedOrgCode = '';
+                let preSelectedOrgName = '';
+                let preSelectedPatternStaff4 = '';
+                let preSelectedPatternStaff5 = '';
+
+                // 変更後の担当者情報を取得
+                STATE.selectStaffs
+                    .filter((s) => s[STAFFMASTER_FIELD.staffCode.cd] === afterStaffCode)
+                    .forEach((s) => {
+                        preSelectedStaffName = s[STAFFMASTER_FIELD.staff.name] || s[STAFFMASTER_FIELD.staff.cd] || '';
+                        preSelectedOrgCode = s[STAFFMASTER_FIELD.organization.cd] && s[STAFFMASTER_FIELD.organization.cd].length > 0 ? s[STAFFMASTER_FIELD.organization.cd][0].code : '';
+                        preSelectedOrgName = s[STAFFMASTER_FIELD.organization.cd] && s[STAFFMASTER_FIELD.organization.cd].length > 0 ? s[STAFFMASTER_FIELD.organization.cd][0].name : '';
+                    });
+
+                // 変更後担当者の表示名（コード＋名前）を変数にセット
+                if (afterStaffCode && afterStaffCode.trim() !== '') {
+                    preSelectedPatternStaff4 = '[' + afterStaffCode + ']' + preSelectedStaffName;
+                    preSelectedPatternStaff5 = preSelectedOrgName;
+                }
+
+                // 巨大なデータを処理する際にメインスレッドを処理前に解放
+                // await new Promise((resolve) => setTimeout(resolve, 10));
+
                 STATE.listData.datas.forEach((data) => {
                     // 選択された担当者コードと同じ場合は置換
 
@@ -2829,31 +2882,22 @@
                     if (fields.staff.length > 0 && wkDatas[fields.searchStaff[0]] === selectedStaffCode) {
                         // 変更後データをセット
                         wkPatternData[fields.patternStaff[0]] = afterStaffCode;
-
-                        STATE.selectStaffs
-                            .filter((s) => s[STAFFMASTER_FIELD.staffCode.cd] === afterStaffCode)
-                            .forEach((s) => {
-                                wkPatternData[fields.patternStaff[1]] = s[STAFFMASTER_FIELD.staff.name];
-                                wkPatternData[fields.patternStaff[2]] = s[STAFFMASTER_FIELD.organization.cd] && s[STAFFMASTER_FIELD.organization.cd].length > 0 ? s[STAFFMASTER_FIELD.organization.cd][0].code : '';
-                                wkPatternData[fields.patternStaff[3]] = s[STAFFMASTER_FIELD.organization.cd] && s[STAFFMASTER_FIELD.organization.cd].length > 0 ? s[STAFFMASTER_FIELD.organization.cd][0].name : '';
-                            });
-                        wkPatternData[fields.patternStaff[4]] = '[' + wkPatternData[fields.patternStaff[0]] + ']' + wkPatternData[fields.patternStaff[1]];
-                        wkPatternData[fields.patternStaff[5]] = wkPatternData[fields.patternStaff[3]];
+                        wkPatternData[fields.patternStaff[1]] = preSelectedStaffName;
+                        wkPatternData[fields.patternStaff[2]] = preSelectedOrgCode;
+                        wkPatternData[fields.patternStaff[3]] = preSelectedOrgName;
+                        wkPatternData[fields.patternStaff[4]] = preSelectedPatternStaff4;
+                        wkPatternData[fields.patternStaff[5]] = preSelectedPatternStaff5;
                     }
+
                     // 副担当者
                     if (fields.subStaff.length > 0 && wkDatas[fields.searchStaff[1]] === selectedStaffCode) {
                         // 変更後データをセット
                         wkPatternData[fields.patternSubStaff[0]] = afterStaffCode;
-
-                        STATE.selectStaffs
-                            .filter((s) => s[STAFFMASTER_FIELD.staffCode.cd] === afterStaffCode)
-                            .forEach((s) => {
-                                wkPatternData[fields.patternSubStaff[1]] = s[STAFFMASTER_FIELD.staff.cd];
-                                wkPatternData[fields.patternSubStaff[2]] = s[STAFFMASTER_FIELD.organization.cd] && s[STAFFMASTER_FIELD.organization.cd].length > 0 ? s[STAFFMASTER_FIELD.organization.cd][0].code : '';
-                                wkPatternData[fields.patternSubStaff[3]] = s[STAFFMASTER_FIELD.organization.cd] && s[STAFFMASTER_FIELD.organization.cd].length > 0 ? s[STAFFMASTER_FIELD.organization.cd][0].name : '';
-                            });
-                        wkPatternData[fields.patternSubStaff[4]] = '[' + wkPatternData[fields.patternSubStaff[0]] + ']' + wkPatternData[fields.patternSubStaff[1]];
-                        wkPatternData[fields.patternSubStaff[5]] = wkPatternData[fields.patternSubStaff[3]];
+                        wkPatternData[fields.patternSubStaff[1]] = preSelectedStaffName; // STAFFMASTER_FIELD.staff.cd -> STAFFMASTER_FIELD.staff.name/cd
+                        wkPatternData[fields.patternSubStaff[2]] = preSelectedOrgCode;
+                        wkPatternData[fields.patternSubStaff[3]] = preSelectedOrgName;
+                        wkPatternData[fields.patternSubStaff[4]] = preSelectedPatternStaff4;
+                        wkPatternData[fields.patternSubStaff[5]] = preSelectedPatternStaff5;
                     }
                 });
 
@@ -3948,7 +3992,13 @@
              * @param {string} code フィールドコード
              * @returns {array} 絞込用オプション配列
              */
+            const optionsCache = new Map(); // 描画ごとの再計算を防ぐキャッシュ
+
             const getUniqueOptions = (code) => {
+                if (optionsCache.has(code)) {
+                    return optionsCache.get(code);
+                }
+
                 let cd = '';
                 let nm = '';
                 let staffFlg = [false, false]; // 担当者、副担当者フラグ
@@ -4136,10 +4186,7 @@
                     });
                 }
 
-                // それ以外の項目
-                //const values = (STATE.listData?.datas ?? []).map((item) => item.datas[code]).filter((v) => v !== undefined && v !== null && String(v).trim() !== '');
-                //return [...new Set(values)].map((v) => ({ value: v, label: v }));
-
+                optionsCache.set(code, rc);
                 return rc;
             };
 
@@ -4993,6 +5040,7 @@
                 STATE.listData.items = [...orderedItems];
 
                 // レコード取得
+                let rawItems = [];
                 try {
                     const records = await getRecords(fields, '', '', utils.constants.CUSTOMER_APP_ID);
                     if (!records || records.length === 0) {
@@ -5005,10 +5053,14 @@
                     }
 
                     let items = [];
-                    let totalStaff = [];
-                    let totalOrg = [];
+                    let totalStaffMap = new Map();
+                    let totalOrgMap = new Map();
                     let i = 0;
-                    records.forEach((rec) => {
+                    for (const rec of records) {
+                        if (i > 0 && i % 500 === 0) {
+                            // 巨大なデータを処理する際にメインスレッドを解放し、フリーズを防止
+                            await new Promise((resolve) => setTimeout(resolve, 0));
+                        }
                         items.push({ datas: {} });
                         STATE.listData.items.forEach((item) => {
                             //console.log(item.label);
@@ -5126,50 +5178,48 @@
                         const orgName = items[i].datas[PATTERN_NAME_ITEMS[8].cd]; // 担当者所属名
                         const fiscalMonth = parseInt(items[i].datas[CUSTOMERCHART_FIELD.fiscalMonth.cd], 10) || 0; // 決算月
 
-                        // 既存の担当者 所属データを検索
-                        let matchStaff = totalStaff.find((data) => data.code === staffCode);
-                        let matchOrg = totalOrg.find((data) => data.code === orgCode);
-
-                        if (matchStaff) {
-                            // 既存担当者の場合、該当月のカウントを増やす
-                            let monthData = matchStaff.datas.find((d) => d.month === fiscalMonth);
-                            if (monthData) {
-                                monthData.count++;
-                            } else {
-                                matchStaff.datas.push({ month: fiscalMonth, count: 1 });
-                            }
-                        } else {
-                            // 新規担当者の場合、新しいエントリを作成
-                            totalStaff.push({
+                        // 担当者データの集計 (Mapを使用)
+                        if (!totalStaffMap.has(staffCode)) {
+                            totalStaffMap.set(staffCode, {
                                 code: staffCode,
                                 name: staffName,
-                                datas: [{ month: fiscalMonth, count: 1 }],
+                                datasMap: new Map(),
                             });
                         }
+                        const staffObj = totalStaffMap.get(staffCode);
+                        staffObj.datasMap.set(fiscalMonth, (staffObj.datasMap.get(fiscalMonth) || 0) + 1);
 
-                        if (matchOrg) {
-                            // 既存所属の場合、該当月のカウントを増やす
-                            let monthData = matchOrg.datas.find((d) => d.month === fiscalMonth);
-                            if (monthData) {
-                                monthData.count++;
-                            } else {
-                                matchOrg.datas.push({ month: fiscalMonth, count: 1 });
-                            }
-                        } else {
-                            // 新規所属の場合、新しいエントリを作成
-                            totalOrg.push({
+                        // 所属データの集計 (Mapを使用)
+                        if (!totalOrgMap.has(orgCode)) {
+                            totalOrgMap.set(orgCode, {
                                 code: orgCode,
                                 name: orgName,
-                                datas: [{ month: fiscalMonth, count: 1 }],
+                                datasMap: new Map(),
                             });
                         }
+                        const orgObj = totalOrgMap.get(orgCode);
+                        orgObj.datasMap.set(fiscalMonth, (orgObj.datasMap.get(fiscalMonth) || 0) + 1);
 
                         i++;
-                    });
+                    }
 
+                    // Mapを配列形式に変換
+                    let totalStaff = Array.from(totalStaffMap.values()).map((staff) => ({
+                        code: staff.code,
+                        name: staff.name,
+                        datas: Array.from(staff.datasMap.entries()).map(([month, count]) => ({ month, count })),
+                    }));
+                    let totalOrg = Array.from(totalOrgMap.values()).map((org) => ({
+                        code: org.code,
+                        name: org.name,
+                        datas: Array.from(org.datasMap.entries()).map(([month, count]) => ({ month, count })),
+                    }));
+
+                    rawItems = items;
                     STATE.listData.datas = items;
                     STATE.itemLength = STATE.listData.items.length;
                     STATE.listTotal = { staff: totalStaff, org: totalOrg };
+                    optionsCache.clear(); // データの取得が完了したためキャッシュをリセット
 
                     console.log('records:', records);
                 } catch (e) {
@@ -5297,8 +5347,8 @@
                                 STATE.exactMatchFields.push(item.code);
 
                                 // 実際のデータがプルダウンにない場合、追加する
-                                // STATE.listData.datasから決データを重複なしで取得
-                                const existingFiscalMonths = [...new Set(STATE.listData.datas.map((data) => data.datas[item.code]).filter((value) => value !== undefined && value !== null && String(value).trim() !== ''))];
+                                // rawItemsからデータを重複なしで取得 (ReactiveなSTATE経由を避けることで高速化)
+                                const existingFiscalMonths = [...new Set(rawItems.map((data) => data.datas[item.code]).filter((value) => value !== undefined && value !== null && String(value).trim() !== ''))];
                                 // 取得したデータとfieldOptionsを比較して、存在しない場合は追加
                                 const currentOptions = STATE.fieldOptions[item.code] || [];
                                 const currentValues = new Set(currentOptions.map((option) => option.value));
